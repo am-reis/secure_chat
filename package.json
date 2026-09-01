@@ -1,0 +1,25 @@
+{
+  "name": "secure-messaging-protocol",
+  "version": "0.1.0",
+  "description": "PQXDH + Double Ratchet secure messaging protocol core (transport-agnostic)",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p tsconfig.test.json"
+  },
+  "dependencies": {
+    "@noble/ciphers": "^2.4.0",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
+    "@noble/post-quantum": "^0.7.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "@vitest/coverage-v8": "^3",
+    "typescript": "^5",
+    "vitest": "^3"
+  }
+}
