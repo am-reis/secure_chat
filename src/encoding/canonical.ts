@@ -87,6 +87,23 @@ export function bytesToHex(bytes: Uint8Array): string {
     return out;
 }
 
+/** Inverse of bytesToHex. Throws on odd length or non-hex characters. */
+export function hexToBytes(hex: string): Uint8Array {
+    if (hex.length % 2 !== 0) {
+        throw new RangeError(`hexToBytes: odd-length input (${hex.length} chars)`);
+    }
+    const out = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < out.length; i++) {
+        const byteStr = hex.substring(i * 2, i * 2 + 2);
+        const byte = Number.parseInt(byteStr, 16);
+        if (Number.isNaN(byte)) {
+            throw new RangeError(`hexToBytes: invalid hex byte "${byteStr}" at offset ${i * 2}`);
+        }
+        out[i] = byte;
+    }
+    return out;
+}
+
 /**
  * Constant-time byte comparison. Use this instead of `===`/`Buffer.equals`
  * whenever comparing secret-derived values (MACs, hashes of secrets, etc.)

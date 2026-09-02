@@ -7,6 +7,8 @@ import {
     canonicalEncodeFields,
     compareBytesLexicographic,
     constantTimeEqual,
+    bytesToHex,
+    hexToBytes,
 } from "../../src/encoding/canonical.js";
 
 const toHex = (b: Uint8Array) => Buffer.from(b).toString("hex");
@@ -109,6 +111,30 @@ describe("compareBytesLexicographic", () => {
         const orderYX = compareBytesLexicographic(y, x) <= 0 ? [y, x] : [x, y];
         expect(toHex(orderXY[0]!)).toBe(toHex(orderYX[0]!));
         expect(toHex(orderXY[1]!)).toBe(toHex(orderYX[1]!));
+    });
+});
+
+describe("bytesToHex / hexToBytes", () => {
+    it("round-trips arbitrary bytes", () => {
+        const original = new Uint8Array([0, 1, 2, 253, 254, 255, 16, 17]);
+        expect(hexToBytes(bytesToHex(original))).toEqual(original);
+    });
+
+    it("pads single-digit bytes with a leading zero", () => {
+        expect(bytesToHex(new Uint8Array([0, 5, 15]))).toBe("00050f");
+    });
+
+    it("handles the empty array", () => {
+        expect(bytesToHex(new Uint8Array(0))).toBe("");
+        expect(hexToBytes("")).toEqual(new Uint8Array(0));
+    });
+
+    it("rejects odd-length hex input", () => {
+        expect(() => hexToBytes("abc")).toThrow(RangeError);
+    });
+
+    it("rejects non-hex characters", () => {
+        expect(() => hexToBytes("zz")).toThrow(RangeError);
     });
 });
 
