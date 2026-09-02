@@ -44,6 +44,22 @@ describe("Double Ratchet — basic protocol correctness", () => {
         expect(() => ratchetEncrypt(provider, bob, utf8("hi"), AD)).toThrow(ProtocolError);
     });
 
+    it("REGRESSION: erasing sk immediately after ratchetInitBob does not corrupt the returned root key", () => {
+        // ratchetInitAlice derives a fresh root key via KDF_RK, decoupled
+        // from its `sk` input. ratchetInitBob's pseudocode is `state.RK =
+        // SK` — a direct assignment that, without a defensive copy, would
+        // alias the caller's buffer. A caller following normal key-hygiene
+        // practice (erase secrets right after they're consumed) would then
+        // silently zero out Bob's live root key.
+        const sk = provider.randomBytes(32);
+        const skHex = toHex(sk);
+        const bobRatchetKeyPair = provider.generateX25519KeyPair();
+        const bob = ratchetInitBob(provider, sk, bobRatchetKeyPair);
+        provider.secureErase(sk);
+        expect(toHex(bob.rootKey)).toBe(skHex);
+        expect(bob.rootKey.every((b) => b === 0)).toBe(false);
+    });
+
     it("round-trips a single message from Alice to Bob", () => {
         const { alice, bob } = setupPair();
         const { header, ciphertext } = ratchetEncrypt(provider, alice, utf8("hello bob"), AD);

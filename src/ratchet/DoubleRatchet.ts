@@ -60,7 +60,15 @@ export function ratchetInitBob(
     return {
         DHs: bobRatchetKeyPair,
         DHr: null,
-        rootKey: sk,
+        rootKey: sk.slice(), // defensive copy — the pseudocode's "state.RK = SK" is
+        // a direct assignment in Python, but in JS/TS that would alias the
+        // caller's buffer. Any caller erasing `sk` right after this call
+        // (correct hygiene once the ratchet has been initialized from it)
+        // would otherwise zero this live root key out from under the
+        // returned state. Copying here makes "safe to erase sk immediately
+        // after calling either ratchetInitAlice or ratchetInitBob" a
+        // uniform contract, rather than something the caller has to know
+        // differs between the two functions.
         sendingChainKey: null,
         receivingChainKey: null,
         sendingMessageNumber: 0,
