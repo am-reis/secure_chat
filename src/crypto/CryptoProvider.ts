@@ -59,6 +59,14 @@ export interface CryptoProvider {
 
     hkdfExpand(prk: Uint8Array, info: Uint8Array, length: number): Uint8Array;
 
+    /**
+     * Raw HMAC. Added for the Double Ratchet's KDF_CK, which the Double
+     * Ratchet spec (§7.2) recommends as literal HMAC with the chain key as
+     * the HMAC key and single-byte constants as input — not HKDF. Output
+     * length matches the underlying hash (SHA-512 = 64 bytes).
+     */
+    hmac(key: Uint8Array, data: Uint8Array): Uint8Array;
+
     aeadEncrypt(
         key: Uint8Array,
         plaintext: Uint8Array,

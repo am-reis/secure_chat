@@ -210,6 +210,33 @@ describe("HKDF (RFC 5869, SHA-512)", () => {
     });
 });
 
+describe("HMAC (SHA-512)", () => {
+    it("matches Node's independent OpenSSL-backed HMAC implementation", () => {
+        const key = provider.randomBytes(32);
+        const data = new TextEncoder().encode("test message");
+        const out = provider.hmac(key, data);
+        const nodeOut = crypto.createHmac("sha512", Buffer.from(key)).update(Buffer.from(data)).digest();
+        expect(toHex(out)).toBe(nodeOut.toString("hex"));
+    });
+
+    it("is deterministic", () => {
+        const key = provider.randomBytes(32);
+        const data = provider.randomBytes(16);
+        expect(toHex(provider.hmac(key, data))).toBe(toHex(provider.hmac(key, data)));
+    });
+
+    it("different keys produce different output for the same data", () => {
+        const data = new TextEncoder().encode("same");
+        const out1 = provider.hmac(provider.randomBytes(32), data);
+        const out2 = provider.hmac(provider.randomBytes(32), data);
+        expect(toHex(out1)).not.toBe(toHex(out2));
+    });
+
+    it("always returns 64 bytes (SHA-512 output length)", () => {
+        expect(provider.hmac(provider.randomBytes(32), new Uint8Array(0)).length).toBe(64);
+    });
+});
+
 describe("AEAD (XChaCha20-Poly1305)", () => {
     it("round-trips plaintext through encrypt/decrypt", () => {
         const key = provider.randomBytes(32);

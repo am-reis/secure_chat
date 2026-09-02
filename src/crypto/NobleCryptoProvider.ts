@@ -1,6 +1,7 @@
 import { ed25519, x25519 } from "@noble/curves/ed25519.js";
 import { xchacha20poly1305 } from "@noble/ciphers/chacha.js";
 import { extract as hkdfExtractRaw, expand as hkdfExpandRaw } from "@noble/hashes/hkdf.js";
+import { hmac as nobleHmac } from "@noble/hashes/hmac.js";
 import { sha256, sha512 } from "@noble/hashes/sha2.js";
 import { ml_kem1024 } from "@noble/post-quantum/ml-kem.js";
 import { randomBytes as nobleRandomBytes } from "@noble/hashes/utils.js";
@@ -152,6 +153,10 @@ export class NobleCryptoProvider implements CryptoProvider {
 
     hkdfExpand(prk: Uint8Array, info: Uint8Array, length: number): Uint8Array {
         return hkdfExpandRaw(sha512, prk, info, length);
+    }
+
+    hmac(key: Uint8Array, data: Uint8Array): Uint8Array {
+        return nobleHmac(sha512, key, data);
     }
 
     // ---- AEAD (XChaCha20-Poly1305) -----------------------------------------
