@@ -205,6 +205,16 @@ describe("SessionManager — Phase 5.3: no partial state on a failed initial mes
     });
 });
 
+describe("SessionManager — restoreSession", () => {
+    it("rejects restoring a session id that's already registered", () => {
+        const alice = makeParty(false);
+        const bob = makeParty(true);
+        const { session, envelope } = alice.manager.createSession(bob.bundle, utf8("hi"));
+        expect(() => alice.manager.restoreSession(session)).toThrow(ProtocolError);
+        void envelope;
+    });
+});
+
 describe("SessionManager — sanity: sessions between unrelated parties don't cross-decrypt", () => {
     it("Mallory cannot decrypt Alice's message to Bob even with her own valid session to Bob", () => {
         const alice = makeParty(false);

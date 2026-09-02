@@ -49,6 +49,24 @@ export class SessionManager {
     }
 
     /**
+     * Register an already-established Session directly — e.g. one loaded
+     * from persistent storage (Phase 13) rather than created via
+     * `createSession`/`receiveMessage` in this process. Throws if a session
+     * with the same id is already registered, to avoid silently clobbering
+     * live in-memory ratchet state with a possibly-stale loaded copy.
+     */
+    restoreSession(session: Session): void {
+        const key = bytesToHex(session.sessionId);
+        if (this.sessions.has(key)) {
+            throw new ProtocolError(
+                "A session with this id is already registered in this SessionManager",
+                "SESSION_STATE_CORRUPTED",
+            );
+        }
+        this.sessions.set(key, session);
+    }
+
+    /**
      * Alice's flow: run PQXDH against Bob's bundle, initialize the Double
      * Ratchet (Bob's SPK becomes his initial ratchet public key — real DR
      * spec §7.1), and immediately encrypt `initialPlaintext` as the first
