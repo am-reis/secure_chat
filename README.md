@@ -61,10 +61,24 @@ this because it never happened to erase `sk` immediately after
 `ratchetInitBob` — it took the SessionManager's real end-to-end handshake
 (which does erase `sk` right after, on both sides, as it should) to surface
 it. A regression test now lives in `test/ratchet/DoubleRatchet.test.ts`.
+- **Phase 13 — encrypted-at-rest session persistence**: `serializeSession`/
+  `deserializeSession` convert a live `Session` to/from a plain hex-string
+  record (deliberately excluding the local identity's private key — only a
+  reference id is stored, since identity and session persistence are
+  separate concerns). `encryptSessionRecord`/`decryptSessionRecord` AEAD-seal
+  that record with the session id as associated data, so a swapped
+  ciphertext under the wrong storage key fails to decrypt rather than
+  silently loading the wrong session. `MasterKeyProvider` is an
+  abstraction, not an implementation — real platform-keychain backing
+  (Electron's `safeStorage`) is desktop-shell code, deliberately outside
+  this portable core. The test that matters most here simulates an actual
+  process restart (fresh store handle, fresh `SessionManager` instance,
+  nothing else carried over) and proves messaging continues correctly in
+  both directions afterward — Phase 34's literal "session state survives
+  process restart" requirement, exercised end-to-end.
 
-Not yet built: persistent (encrypted-at-rest) session storage (Phase 13),
-Waku transport (Phase 20+) — see `docs/spec.md`'s Phase 33 implementation
-order.
+Not yet built: the Waku transport layer (Phase 20+) — see `docs/spec.md`'s
+Phase 33 implementation order.
 
 ## Structure
 
@@ -76,6 +90,9 @@ src/
   identity/      Long-term identity, identityId, verification fingerprint
   prekeys/       Signed/PQ/one-time prekeys, PrekeyStore, PreKeyBundle + validation
   pqxdh/         PQXDH initiator/responder, KDF, associated data
+  ratchet/       Double Ratchet: state, KDF_RK/KDF_CK, encrypt/decrypt, header AD
+  session/       SessionManager: PQXDH + Double Ratchet integration, envelopes
+  persistence/   Encrypted-at-rest session storage (Phase 13)
   errors.ts      Shared protocol error taxonomy (Phase 17 codes)
 test/            Mirrors src/, one test file per module
 ```
@@ -88,8 +105,8 @@ npm run typecheck   # tsc --noEmit, src + test
 npm test             # vitest run
 ```
 
-All tests currently pass (162 as of the SessionManager integration). No
-network access is required
+All tests currently pass (181 as of Phase 13 persistence). No network access
+is required
 to run the tests — the RFC/NIST vectors baked into the crypto tests were
 verified against independent implementations (Node's `crypto`, Python's
 `hashlib`) at the time they were written, not fetched at test time.
