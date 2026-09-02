@@ -39,9 +39,32 @@ Implemented and tested (see commit history for the phase each one landed in):
   requirement is structural, not best-effort — verified by a dedicated test
   suite asserting a full state snapshot is byte-identical before/after every
   adversarial failure case.
+- **Phase 9 + 14 + 16 + 23 — SessionManager**: the integration glue Phase 5
+  and Phase 6 each deliberately left unconnected. `createSession` runs
+  PQXDH, initializes the Double Ratchet, and encrypts the first message in
+  one call; `receiveMessage` implements the Phase 22/23 routing rules
+  (unknown session + `MESSAGE` is rejected outright; unknown session +
+  `SESSION_INIT` runs the full responder flow; an already-known session's
+  repeated `SESSION_INIT` converges on the same session instead of creating
+  a second one, per Phase 16). The one-time prekey commit ordering from
+  Phase 5.3 is preserved end-to-end: consumed only after the initial
+  message actually decrypts, released on any failure.
 
-Not yet built: PQXDH+Double Ratchet integration glue (Session Manager,
-Phase 9/14) onward — see `docs/spec.md`'s Phase 33 implementation order.
+**A real bug surfaced and got fixed here**: `ratchetInitBob`'s pseudocode
+(`state.RK = SK`) is a direct assignment in Python with no aliasing
+implications — but the equivalent JS/TS assignment aliases the caller's
+buffer. A caller erasing `sk` right after ratchet init (correct key
+hygiene) would silently zero out Bob's live root key. Every message from
+Alice to Bob failed AEAD authentication until this was traced to that one
+missing defensive copy. Notably, Phase 6's own test suite never exercised
+this because it never happened to erase `sk` immediately after
+`ratchetInitBob` — it took the SessionManager's real end-to-end handshake
+(which does erase `sk` right after, on both sides, as it should) to surface
+it. A regression test now lives in `test/ratchet/DoubleRatchet.test.ts`.
+
+Not yet built: persistent (encrypted-at-rest) session storage (Phase 13),
+Waku transport (Phase 20+) — see `docs/spec.md`'s Phase 33 implementation
+order.
 
 ## Structure
 
@@ -65,7 +88,8 @@ npm run typecheck   # tsc --noEmit, src + test
 npm test             # vitest run
 ```
 
-All tests currently pass (150 as of Phase 6/8). No network access is required
+All tests currently pass (162 as of the SessionManager integration). No
+network access is required
 to run the tests — the RFC/NIST vectors baked into the crypto tests were
 verified against independent implementations (Node's `crypto`, Python's
 `hashlib`) at the time they were written, not fetched at test time.
