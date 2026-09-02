@@ -77,6 +77,17 @@ export function compareBytesLexicographic(a: Uint8Array, b: Uint8Array): number 
 }
 
 /**
+ * Pure-JS hex encoding (no Buffer/Node dependency) — this module needs to
+ * stay portable to environments like React Native where Buffer isn't
+ * guaranteed available without a polyfill.
+ */
+export function bytesToHex(bytes: Uint8Array): string {
+    let out = "";
+    for (const b of bytes) out += b.toString(16).padStart(2, "0");
+    return out;
+}
+
+/**
  * Constant-time byte comparison. Use this instead of `===`/`Buffer.equals`
  * whenever comparing secret-derived values (MACs, hashes of secrets, etc.)
  * to avoid leaking information through timing side channels. Always
