@@ -29,12 +29,19 @@ Implemented and tested (see commit history for the phase each one landed in):
   `HKDF(DH1‖DH2‖DH3‖SS)` the spec explicitly warns against. Verified
   end-to-end: initiator and responder independently derive byte-identical
   `SK`/`AD`.
+- **Phase 6 + 8 — Double Ratchet, with out-of-order/skipped messages**:
+  the real Double Ratchet spec (also fetched and verified), consolidating
+  Phase 6 and Phase 8 into one pass since skipped-key handling isn't
+  meaningfully separable from `RatchetDecrypt` — trying skipped keys first
+  is step one of the real algorithm. `ratchetDecrypt` derives everything on
+  a cloned working state and only commits after the AEAD decrypt actually
+  succeeds, so the spec's "failed messages must not mutate state"
+  requirement is structural, not best-effort — verified by a dedicated test
+  suite asserting a full state snapshot is byte-identical before/after every
+  adversarial failure case.
 
-Not yet built: Double Ratchet (Phase 6) onward — see `docs/spec.md`'s
-Phase 33 implementation order for what's next. PQXDH is deliberately scoped
-to SK/AD derivation only for now; full initial-message envelope assembly
-depends on the Double Ratchet existing first (the "initial ciphertext" *is*
-the first Double Ratchet message per the real spec).
+Not yet built: PQXDH+Double Ratchet integration glue (Session Manager,
+Phase 9/14) onward — see `docs/spec.md`'s Phase 33 implementation order.
 
 ## Structure
 
@@ -58,7 +65,7 @@ npm run typecheck   # tsc --noEmit, src + test
 npm test             # vitest run
 ```
 
-All tests currently pass (129 as of Phase 5). No network access is required
+All tests currently pass (150 as of Phase 6/8). No network access is required
 to run the tests — the RFC/NIST vectors baked into the crypto tests were
 verified against independent implementations (Node's `crypto`, Python's
 `hashlib`) at the time they were written, not fetched at test time.
@@ -84,3 +91,9 @@ verified against independent implementations (Node's `crypto`, Python's
   reservation's check and its transition). A persistent (Phase 13) backend
   MUST implement `reserve` as a single atomic transaction — see the doc
   comment in `src/prekeys/PrekeyStore.ts` for exactly what that requires.
+- **The Double Ratchet's root KDF and PQXDH's KDF use opposite HKDF
+  conventions on purpose** — PQXDH keys HKDF by a fixed salt with the
+  secret as input key material; the ratchet's `KDF_RK` uses the running
+  root key as the HKDF *salt* and the fresh DH output as the *input key
+  material*. Both are correct per their respective specs; it's just easy to
+  transpose them by habit. See `src/ratchet/kdf.ts`.
