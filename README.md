@@ -109,10 +109,18 @@ unit tests at the ratchet/session layer alone hadn't happened to construct.
 Fixed with the same remedy (a defensive copy), with a dedicated regression
 test now at the Double Ratchet layer itself.
 
-Not yet built: real `js-waku` integration (swapping the mock for the real
-transport, which this design deliberately makes a bounded, isolated change)
-and Phase 10's real wire format (protobuf) — see `docs/spec.md`'s Phase 33
-implementation order.
+- **Phase 26 — delivery/read receipts**: a small, optional
+  `ApplicationContent` wrapper (`TEXT` / `DELIVERY_RECEIPT` / `READ_RECEIPT`)
+  applications can use on top of `SessionManager.sendMessage`/
+  `receiveMessage`. Deliberately does NOT change `SessionManager` itself —
+  it stays completely content-agnostic (Invariant 10), and plain
+  `Uint8Array` plaintext with no wrapper continues to work unchanged. A
+  receipt identifies which message it acknowledges by the same
+  `(ratchetPublicKey, messageNumber)` pair that's already a message's
+  logical identity (Phase 15).
+
+Not yet built: real `js-waku` integration and Phase 10's real wire format
+(protobuf) — see `docs/spec.md`'s Phase 33 implementation order.
 
 ## Structure
 
@@ -128,6 +136,7 @@ src/
   session/       SessionManager: PQXDH + Double Ratchet integration, envelopes
   persistence/   Encrypted-at-rest session storage (Phase 13)
   transport/     Mock Waku transport, fault injection, content topics, messaging client (Phase 20/21/28.4)
+  receipts/      Delivery/read receipts as ordinary encrypted messages (Phase 26)
   errors.ts      Shared protocol error taxonomy (Phase 17 codes)
 test/            Mirrors src/, one test file per module
 ```
@@ -140,8 +149,8 @@ npm run typecheck   # tsc --noEmit, src + test
 npm test             # vitest run
 ```
 
-All tests currently pass (200 as of the mock Waku transport layer). No
-network access is required
+All tests currently pass (209 as of delivery/read receipts). No network
+access is required
 to run the tests — the RFC/NIST vectors baked into the crypto tests were
 verified against independent implementations (Node's `crypto`, Python's
 `hashlib`) at the time they were written, not fetched at test time.
