@@ -60,6 +60,44 @@ describe("Double Ratchet — basic protocol correctness", () => {
         expect(bob.rootKey.every((b) => b === 0)).toBe(false);
     });
 
+    it("REGRESSION: a shared SPK keypair reused across two independent sessions survives both sessions' first DH ratchet step intact", () => {
+        // Bob's SPK (real spec §7.1) is reused across every concurrently-
+        // establishing session — it is NOT a single-use ratchet key. Each
+        // session's first DH ratchet step zeroizes the "old" DHs.privateKey
+        // it's superseding (correct for an ordinary one-time ratchet key).
+        // Without a defensive copy in ratchetInitBob, that erasure would
+        // reach through to the SHARED SPK object, silently destroying it
+        // for every other in-flight session the moment the first one
+        // completes its own ratchet step.
+        const sharedSpk = provider.generateX25519KeyPair();
+        const spkPrivateHex = toHex(sharedSpk.privateKey);
+        const spkPublicHex = toHex(sharedSpk.publicKey);
+
+        const sessionASk = provider.randomBytes(32);
+        const sessionBSk = provider.randomBytes(32);
+        const bobForSessionA = ratchetInitBob(provider, sessionASk, sharedSpk);
+        const bobForSessionB = ratchetInitBob(provider, sessionBSk, sharedSpk);
+
+        // Simulate session A's first received message (any independent
+        // Alice ephemeral key works here — this test only cares about what
+        // happens to the shared SPK, not about a real handshake).
+        const aliceA = ratchetInitAlice(provider, sessionASk, sharedSpk.publicKey);
+        const msgA = ratchetEncrypt(provider, aliceA, utf8("A"), AD);
+        const plaintextA = ratchetDecrypt(provider, bobForSessionA, msgA.header, msgA.ciphertext, AD);
+        expect(new TextDecoder().decode(plaintextA)).toBe("A");
+
+        // The shared SPK object itself must be completely untouched.
+        expect(toHex(sharedSpk.privateKey)).toBe(spkPrivateHex);
+        expect(toHex(sharedSpk.publicKey)).toBe(spkPublicHex);
+
+        // Session B, started from the SAME shared SPK object, must still
+        // work correctly after session A's ratchet step.
+        const aliceB = ratchetInitAlice(provider, sessionBSk, sharedSpk.publicKey);
+        const msgB = ratchetEncrypt(provider, aliceB, utf8("B"), AD);
+        const plaintextB = ratchetDecrypt(provider, bobForSessionB, msgB.header, msgB.ciphertext, AD);
+        expect(new TextDecoder().decode(plaintextB)).toBe("B");
+    });
+
     it("round-trips a single message from Alice to Bob", () => {
         const { alice, bob } = setupPair();
         const { header, ciphertext } = ratchetEncrypt(provider, alice, utf8("hello bob"), AD);

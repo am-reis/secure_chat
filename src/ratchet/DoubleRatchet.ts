@@ -58,7 +58,20 @@ export function ratchetInitBob(
     bobRatchetKeyPair: KeyPair,
 ): DoubleRatchetState {
     return {
-        DHs: bobRatchetKeyPair,
+        // Defensive copy — CRITICAL, not just hygiene, for this one.
+        // `bobRatchetKeyPair` is Bob's SPK (real spec §7.1): a long-lived
+        // key reused across every concurrently-establishing session, NOT a
+        // single-use ratchet key. Once Bob's first DH ratchet step runs for
+        // ANY session (dhRatchetStep in this file), it zeroizes the "old"
+        // DHs.privateKey it's superseding — completely correct for an
+        // ordinary one-time ratchet key, but catastrophic if that buffer is
+        // actually aliased to the shared SPK object: the first session to
+        // complete its ratchet step would silently destroy Bob's signed
+        // prekey out from under every other in-flight session started from
+        // the same bundle. Copying here means each session's DHs is
+        // genuinely its own, independent of the original SPK object and of
+        // every other session that also started from it.
+        DHs: { publicKey: bobRatchetKeyPair.publicKey.slice(), privateKey: bobRatchetKeyPair.privateKey.slice() },
         DHr: null,
         rootKey: sk.slice(), // defensive copy — the pseudocode's "state.RK = SK" is
         // a direct assignment in Python, but in JS/TS that would alias the
