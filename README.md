@@ -76,9 +76,43 @@ it. A regression test now lives in `test/ratchet/DoubleRatchet.test.ts`.
   nothing else carried over) and proves messaging continues correctly in
   both directions afterward — Phase 34's literal "session state survives
   process restart" requirement, exercised end-to-end.
+- **Phase 20/21/28.4 — mock Waku transport**: built against a mock rather
+  than real `js-waku` for now (Waku is mature/simple enough that this
+  doesn't cost much, and it decouples protocol-robustness testing from
+  network/infra setup). Every fault-injection parameter traces to a
+  specific, current, documented Waku characteristic rather than generic
+  P2P assumptions — see `src/transport/WakuTransport.ts` and
+  `MockWakuNetwork.ts` for the sources (RFC 64's 150 KiB message cap,
+  Store's documented non-guarantee of availability, RLN rate limiting,
+  fire-and-forget publish semantics). `WakuMessagingClient` is the
+  `SessionManager`↔`WakuTransport` binding — real code, not test
+  scaffolding, so swapping in a real `js-waku`-backed transport later
+  changes nothing above this layer. The test suite runs Phase 28.4's full
+  adversarial list (drop, duplicate, delay/reorder, corrupt, partition,
+  rate-limit, Store-based offline catch-up and its own incompleteness,
+  injected/malicious messages) through actual `SessionManager` instances
+  talking over the mock, not just unit-level fault-injection checks.
 
-Not yet built: the Waku transport layer (Phase 20+) — see `docs/spec.md`'s
-Phase 33 implementation order.
+**A second, more serious aliasing bug surfaced and got fixed here** — this
+one was latent in already-delivered code, not something newly introduced.
+`ratchetInitBob` stored Bob's SPK keypair directly as the new state's
+`DHs`, unguarded, the same class of bug as the `sk` aliasing fix in the
+SessionManager commit — except this one meant the *first* of several
+concurrent sessions to complete its DH ratchet step would silently
+zeroize Bob's signed prekey's private key out from under every other
+session started from the same published bundle (completely normal usage —
+an SPK is reused across every session established before its next
+rotation, unlike a one-time prekey). It surfaced only once the transport
+tests exercised two independent parties establishing sessions from the same
+bundle concurrently — exactly the kind of realistic multi-session scenario
+unit tests at the ratchet/session layer alone hadn't happened to construct.
+Fixed with the same remedy (a defensive copy), with a dedicated regression
+test now at the Double Ratchet layer itself.
+
+Not yet built: real `js-waku` integration (swapping the mock for the real
+transport, which this design deliberately makes a bounded, isolated change)
+and Phase 10's real wire format (protobuf) — see `docs/spec.md`'s Phase 33
+implementation order.
 
 ## Structure
 
@@ -93,6 +127,7 @@ src/
   ratchet/       Double Ratchet: state, KDF_RK/KDF_CK, encrypt/decrypt, header AD
   session/       SessionManager: PQXDH + Double Ratchet integration, envelopes
   persistence/   Encrypted-at-rest session storage (Phase 13)
+  transport/     Mock Waku transport, fault injection, content topics, messaging client (Phase 20/21/28.4)
   errors.ts      Shared protocol error taxonomy (Phase 17 codes)
 test/            Mirrors src/, one test file per module
 ```
@@ -105,8 +140,8 @@ npm run typecheck   # tsc --noEmit, src + test
 npm test             # vitest run
 ```
 
-All tests currently pass (181 as of Phase 13 persistence). No network access
-is required
+All tests currently pass (200 as of the mock Waku transport layer). No
+network access is required
 to run the tests — the RFC/NIST vectors baked into the crypto tests were
 verified against independent implementations (Node's `crypto`, Python's
 `hashlib`) at the time they were written, not fetched at test time.
