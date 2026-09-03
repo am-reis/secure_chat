@@ -118,6 +118,14 @@ test now at the Double Ratchet layer itself.
   receipt identifies which message it acknowledges by the same
   `(ratchetPublicKey, messageNumber)` pair that's already a message's
   logical identity (Phase 15).
+- **Phase 29 — property-based testing**: `fast-check`-driven tests running
+  the exact properties the spec lists — `decrypt(encrypt(M)) == M`,
+  tamper(ciphertext/header/AD) always rejects, replay never delivers twice,
+  arbitrary reordering still lets every message decrypt — over hundreds of
+  randomized inputs each, on top of (not instead of) the existing
+  example-based test suite. No new bugs surfaced across ~1000 randomized
+  cases, a useful signal given this exact layer's history (see the two
+  `ratchetInitBob` aliasing fixes above).
 
 Not yet built: real `js-waku` integration and Phase 10's real wire format
 (protobuf) — see `docs/spec.md`'s Phase 33 implementation order.
@@ -149,8 +157,8 @@ npm run typecheck   # tsc --noEmit, src + test
 npm test             # vitest run
 ```
 
-All tests currently pass (209 as of delivery/read receipts). No network
-access is required
+All tests currently pass (217 as of Phase 29 property-based testing). No
+network access is required
 to run the tests — the RFC/NIST vectors baked into the crypto tests were
 verified against independent implementations (Node's `crypto`, Python's
 `hashlib`) at the time they were written, not fetched at test time.
