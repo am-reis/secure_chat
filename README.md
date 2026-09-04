@@ -126,6 +126,52 @@ test now at the Double Ratchet layer itself.
   example-based test suite. No new bugs surfaced across ~1000 randomized
   cases, a useful signal given this exact layer's history (see the two
   `ratchetInitBob` aliasing fixes above).
+- **Phase 30 — crash recovery**: see the prominent callout immediately
+  below — `src/persistence/outbox.ts` + `src/session/durableMessaging.ts`.
+
+## ⚠️ Required reading before persisting sessions: safe message sending
+
+Phase 30 (crash recovery testing) found a real defect, not just a
+theoretical risk. **Never call `sessionManager.sendMessage` again "to
+retry" a message after restoring a session from persistence.**
+
+`ratchetEncrypt`'s chain-key derivation is a pure function of the current
+chain key. If your app encrypts and transmits a message but crashes before
+persisting the *advanced* session state, restoring the last-persisted
+(stale, pre-send) state and calling `sendMessage` again for different
+content deterministically derives the **same** message key and the same
+`(ratchetPublicKey, messageNumber)` identity as the message that was
+already sent. If the recipient already received the first one — entirely
+plausible over a P2P/store-and-forward transport, where the sender can't
+know whether delivery happened before the crash — the second message
+becomes **permanently undecryptable** to them, indistinguishable from a
+replay attack. This is proven as a standing regression test in
+`test/crashRecovery/crashRecovery.test.ts`.
+
+**Use `sendMessageDurably` / `resumePendingOutbox`
+(`src/session/durableMessaging.ts`) instead of calling `sendMessage`
+directly whenever the session is persisted:**
+
+```ts
+// Sending:
+await sendMessageDurably(manager, store, provider, masterKeyProvider, transport, sessionId, plaintext);
+
+// On startup, for every restored session, BEFORE anything else touches it:
+await resumePendingOutbox(store, transport, sessionId);
+```
+
+This persists the advanced state and the exact outgoing envelope bytes
+*before* attempting transmission, and only clears that record once
+transmission succeeds — so a resumed send after a crash always retransmits
+identically rather than re-deriving a new message. A duplicate delivery
+from a retransmission-after-transmission-already-succeeded is safely
+deduped by the ratchet's own existing replay protection (Phase 6) — the
+application still only ever sees it once.
+
+The receiving side needed no such fix: `ratchetDecrypt` is already
+side-effect-free until commit (Phase 6), so a crash before persisting a
+*received* message is automatically safe — redelivery of the same message
+after restart just decrypts correctly again.
 
 Not yet built: real `js-waku` integration and Phase 10's real wire format
 (protobuf) — see `docs/spec.md`'s Phase 33 implementation order.
@@ -157,8 +203,8 @@ npm run typecheck   # tsc --noEmit, src + test
 npm test             # vitest run
 ```
 
-All tests currently pass (217 as of Phase 29 property-based testing). No
-network access is required
+All tests currently pass (222 as of Phase 30 crash recovery). No network
+access is required
 to run the tests — the RFC/NIST vectors baked into the crypto tests were
 verified against independent implementations (Node's `crypto`, Python's
 `hashlib`) at the time they were written, not fetched at test time.
