@@ -173,6 +173,13 @@ side-effect-free until commit (Phase 6), so a crash before persisting a
 *received* message is automatically safe — redelivery of the same message
 after restart just decrypts correctly again.
 
+- **Phase 27 — protocol versioning stress test**: proves the versioning
+  *mechanism*'s isolation properties (topic-level isolation, defense-in-depth
+  version rejection, exact-match semantics with no silent range tolerance,
+  and zero cross-talk when two version tags coexist on one network) — not a
+  claim that a real, differing-crypto v2 exists yet, since that's Phase 35
+  territory and explicitly out of scope for now.
+
 Not yet built: real `js-waku` integration and Phase 10's real wire format
 (protobuf) — see `docs/spec.md`'s Phase 33 implementation order.
 
@@ -203,8 +210,8 @@ npm run typecheck   # tsc --noEmit, src + test
 npm test             # vitest run
 ```
 
-All tests currently pass (222 as of Phase 30 crash recovery). No network
-access is required
+All tests currently pass (230 as of Phase 27 protocol versioning). No
+network access is required
 to run the tests — the RFC/NIST vectors baked into the crypto tests were
 verified against independent implementations (Node's `crypto`, Python's
 `hashlib`) at the time they were written, not fetched at test time.
