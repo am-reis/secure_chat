@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package securemessaging.v1;
+
+// Phase 6.4 / real Double Ratchet spec's (dh, pn, n).
+message RatchetHeaderProto {
+    bytes ratchet_public_key = 1;
+    uint32 previous_chain_length = 2;
+    uint32 message_number = 3;
+}
+
+// Phase 11's minimal message-type set actually implemented so far.
+enum EnvelopeType {
+    ENVELOPE_TYPE_UNSPECIFIED = 0; // never used on the wire; catches a missing/corrupt type field explicitly rather than silently defaulting to a real type
+    SESSION_INIT = 1;
+    MESSAGE = 2;
+}
+
+// Phase 10's EncryptedMessage, adapted to the fields this implementation
+// actually has. Fields 6-11 are populated only for SESSION_INIT and left at
+// their zero value for MESSAGE — kept in one message type (rather than a
+// oneof or two separate message types) because proto3's field-presence
+// rules already give SESSION_INIT-vs-MESSAGE discrimination via `type`,
+// and it keeps the wire format simple and the generated bindings small.
+//
+// one_time_prekey_id uses proto3 "optional" specifically to distinguish
+// "no one-time prekey was used" from "prekey id 0" — a plain uint32 field
+// can't represent that distinction (proto3 non-optional scalars are never
+// wire-encoded at their zero value, but on decode you can't tell "absent"
+// from "present and zero" without the presence tracking optional enables).
+message EnvelopeProto {
+    EnvelopeType type = 1;
+    uint32 protocol_version = 2;
+    bytes session_id = 3;
+    RatchetHeaderProto ratchet_header = 4;
+    bytes ciphertext = 5;
+
+    bytes sender_identity_public_key = 6;
+    bytes ephemeral_public_key = 7;
+    bytes pq_ciphertext = 8;
+    uint32 signed_prekey_id = 9;
+    optional uint32 one_time_prekey_id = 10;
+    uint32 pq_prekey_id = 11;
+}

@@ -17,7 +17,7 @@ import { resumePendingOutbox } from "../../src/session/durableMessaging.js";
 import { MockWakuNetwork } from "../../src/transport/MockWakuNetwork.js";
 import { MockWakuTransport } from "../../src/transport/MockWakuTransport.js";
 import { messageContentTopic } from "../../src/transport/contentTopics.js";
-import { encodeEnvelope } from "../../src/transport/envelopeCodec.js";
+import { encodeEnvelope } from "../../src/transport/protoEnvelopeCodec.js";
 import { ProtocolError } from "../../src/errors.js";
 
 const provider = new NobleCryptoProvider();

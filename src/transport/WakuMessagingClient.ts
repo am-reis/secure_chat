@@ -3,7 +3,7 @@ import type { PreKeyBundle } from "../prekeys/PreKeyBundle.js";
 import type { Session, SessionId } from "../session/types.js";
 import type { WakuTransport, WakuMessage } from "./WakuTransport.js";
 import { sessionInitContentTopic, messageContentTopic } from "./contentTopics.js";
-import { encodeEnvelope, decodeEnvelope } from "./envelopeCodec.js";
+import { encodeEnvelope, decodeEnvelope } from "./protoEnvelopeCodec.js";
 import { CURRENT_PROTOCOL_VERSION } from "../prekeys/PreKeyBundle.js";
 
 export interface WakuMessagingClientOptions {

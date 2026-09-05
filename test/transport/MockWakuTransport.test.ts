@@ -13,7 +13,7 @@ import { MockWakuNetwork } from "../../src/transport/MockWakuNetwork.js";
 import { MockWakuTransport } from "../../src/transport/MockWakuTransport.js";
 import { WakuMessagingClient } from "../../src/transport/WakuMessagingClient.js";
 import { messageContentTopic, sessionInitContentTopic } from "../../src/transport/contentTopics.js";
-import { encodeEnvelope } from "../../src/transport/envelopeCodec.js";
+import { encodeEnvelope } from "../../src/transport/protoEnvelopeCodec.js";
 import { MAX_WAKU_MESSAGE_SIZE } from "../../src/transport/WakuTransport.js";
 import { ProtocolError } from "../../src/errors.js";
 

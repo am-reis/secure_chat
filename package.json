@@ -8,18 +8,21 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit -p tsconfig.test.json"
+    "typecheck": "tsc --noEmit -p tsconfig.test.json",
+    "proto:generate": "pbjs -t static-module -w es6 -o src/transport/proto/envelope.pb.js src/transport/proto/envelope.proto && pbts -o src/transport/proto/envelope.pb.d.ts src/transport/proto/envelope.pb.js"
   },
   "dependencies": {
     "@noble/ciphers": "^2.4.0",
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",
-    "@noble/post-quantum": "^0.7.1"
+    "@noble/post-quantum": "^0.7.1",
+    "protobufjs": "^8.8.0"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",
     "@vitest/coverage-v8": "^3",
     "fast-check": "^4.9.0",
+    "protobufjs-cli": "^2.7.0",
     "typescript": "^5",
     "vitest": "^3"
   }

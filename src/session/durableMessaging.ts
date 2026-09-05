@@ -6,7 +6,7 @@ import { saveSession } from "../persistence/encryptedStorage.js";
 import { saveOutboxEntry, loadOutboxEntry, clearOutboxEntry } from "../persistence/outbox.js";
 import type { WakuTransport } from "../transport/WakuTransport.js";
 import { sessionInitContentTopic, messageContentTopic } from "../transport/contentTopics.js";
-import { encodeEnvelope, decodeEnvelope } from "../transport/envelopeCodec.js";
+import { encodeEnvelope, decodeEnvelope } from "../transport/protoEnvelopeCodec.js";
 import { ProtocolError } from "../errors.js";
 
 /**
