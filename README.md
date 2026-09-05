@@ -179,9 +179,20 @@ after restart just decrypts correctly again.
   and zero cross-talk when two version tags coexist on one network) — not a
   claim that a real, differing-crypto v2 exists yet, since that's Phase 35
   territory and explicitly out of scope for now.
+- **Phase 10 — real (protobuf) wire format**: replaces the earlier JSON
+  placeholder codec entirely. Chosen over hand-rolling a binary format
+  (despite already having the length-prefixed encoding primitives to do
+  so) because this project's stated direction is desktop first, mobile
+  later, and protobuf has mature Kotlin/Swift codegen — a hand-rolled
+  format would need bit-for-bit reimplementation on every future platform.
+  Generated via `protobufjs`'s own pure-JS `pbjs`/`pbts` (no system
+  `protoc` binary needed — `npm run proto:generate` regenerates from
+  `src/transport/proto/envelope.proto`). `protoEnvelopeCodec.ts` exposes
+  the identical `encodeEnvelope`/`decodeEnvelope` signatures the JSON
+  placeholder had, so nothing above the transport boundary changed.
 
-Not yet built: real `js-waku` integration and Phase 10's real wire format
-(protobuf) — see `docs/spec.md`'s Phase 33 implementation order.
+Not yet built: real `js-waku` integration — see `docs/spec.md`'s Phase 33
+implementation order.
 
 ## Structure
 
@@ -196,7 +207,8 @@ src/
   ratchet/       Double Ratchet: state, KDF_RK/KDF_CK, encrypt/decrypt, header AD
   session/       SessionManager: PQXDH + Double Ratchet integration, envelopes
   persistence/   Encrypted-at-rest session storage (Phase 13)
-  transport/     Mock Waku transport, fault injection, content topics, messaging client (Phase 20/21/28.4)
+  transport/     Mock Waku transport, fault injection, content topics, messaging
+                 client, protobuf wire format (Phase 10/20/21/28.4)
   receipts/      Delivery/read receipts as ordinary encrypted messages (Phase 26)
   errors.ts      Shared protocol error taxonomy (Phase 17 codes)
 test/            Mirrors src/, one test file per module
@@ -206,11 +218,12 @@ test/            Mirrors src/, one test file per module
 
 ```bash
 npm install
-npm run typecheck   # tsc --noEmit, src + test
-npm test             # vitest run
+npm run typecheck      # tsc --noEmit, src + test
+npm test                # vitest run
+npm run proto:generate  # regenerate src/transport/proto/envelope.pb.{js,d.ts} after editing envelope.proto
 ```
 
-All tests currently pass (230 as of Phase 27 protocol versioning). No
+All tests currently pass (235 as of Phase 10's real wire format). No
 network access is required
 to run the tests — the RFC/NIST vectors baked into the crypto tests were
 verified against independent implementations (Node's `crypto`, Python's
