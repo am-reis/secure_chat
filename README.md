@@ -203,6 +203,27 @@ after restart just decrypts correctly again.
   (`EnvelopeType.SESSION_RESET`, a new `signature` field) and
   `WakuMessagingClient` (a dedicated content topic, `resetSession()`, and
   an `onSessionReset` callback), not just at the `SessionManager` layer.
+- **Fuzzing** (Phase 33's implementation-order item 20, distinct from
+  Phase 29's targeted property tests): `test/fuzz/` feeds genuinely
+  random/malformed bytes, at volume, at the three boundaries where
+  attacker- or corruption-controlled input first reaches this codebase —
+  `decodeEnvelope` (the wire format), `decryptSessionRecord` (persisted
+  session data), and `validatePreKeyBundle` (a fetched prekey bundle) —
+  and checks one property each time: never anything but a classified
+  `ProtocolError`, never a raw/unclassified exception, never a hang.
+  **A genuine, non-obvious finding surfaced here**: corrupting a bundle's
+  one-time prekey (`oneTimePreKey.publicKey`) is the one field
+  `validatePreKeyBundle` does *not* reject — by design, not a bug: unlike
+  every other bundle field, the wire format never carries a signature over
+  the OTK (matching real X3DH/PQXDH bundle formats), so there is nothing
+  for that layer to check it against. What actually protects it is PQXDH's
+  own DH4 = DH(EK_A, OPK_B): Alice computes it from whatever bytes were in
+  the bundle, but Bob computes his mirror of DH4 from his own stored
+  private key, never from Alice's bundle — so a corrupted OTK makes the
+  two sides' derived `SK` diverge, and the initial message's AEAD
+  authentication on Bob's side fails cleanly (Phase 5.3's existing
+  no-partial-state guarantee). `test/fuzz/validatePreKeyBundle.fuzz.test.ts`
+  proves this full chain end to end, not just the two halves separately.
 - **Phase 24 — attachments**: `src/attachments/attachmentCrypto.ts`
   implements the spec's flow — encrypt the attachment under its own fresh
   random key, hand the caller the ciphertext to upload, and let
@@ -267,7 +288,7 @@ npm test                # vitest run
 npm run proto:generate  # regenerate src/transport/proto/envelope.pb.{js,d.ts} after editing envelope.proto
 ```
 
-All tests currently pass (256 as of Phase 24's attachments). No
+All tests currently pass (268 as of adding fuzz testing). No
 network access is required
 to run the tests — the RFC/NIST vectors baked into the crypto tests were
 verified against independent implementations (Node's `crypto`, Python's

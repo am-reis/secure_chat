@@ -18,6 +18,17 @@ What exists today toward that eventually happening:
 - **Phase 30** — crash-recovery tests, including one that formalized a real
   defect (see the "Required reading" section of [README.md](README.md) and
   [CHANGELOG.md](CHANGELOG.md)) before it was fixed.
+- **Fuzzing** — `test/fuzz/` runs random/malformed bytes at volume against
+  the three boundaries where attacker- or corruption-controlled input first
+  reaches this codebase (wire-format decode, persisted-session decrypt,
+  prekey bundle validation). It has already found one genuine, non-obvious
+  (if benign) design property worth knowing: `validatePreKeyBundle` does
+  not and cannot reject a corrupted one-time prekey, because that field
+  isn't signed in the wire format at all — its integrity is instead
+  enforced downstream, by PQXDH's own DH computation making the two
+  parties' derived session keys diverge on a tampered OTK. See the
+  README's "Fuzzing" entry for the full explanation and the test that
+  proves the downstream guarantee actually holds.
 
 What's still outstanding before a real audit is meaningful (Phase 31 of
 [docs/spec.md](docs/spec.md)):
@@ -31,8 +42,7 @@ What's still outstanding before a real audit is meaningful (Phase 31 of
 7. Security invariants doc (Phase 32's list, with each one mapped to the
    test(s) that enforce it)
 8. Test vector suite (independently sourced, not just self-consistent)
-9. Fuzzing results
-10. Dependency inventory (crypto libraries, provenance, version pinning)
+9. Dependency inventory (crypto libraries, provenance, version pinning)
 
 ## Design principles this codebase tries to hold to
 

@@ -11,6 +11,19 @@ version of each phase — this file is the scannable index.
 
 Nothing in flight right now.
 
+## Fuzzing
+
+- `test/fuzz/`: random/malformed-byte fuzzing (fast-check, thousands of
+  runs) at the three boundaries where attacker- or corruption-controlled
+  input first reaches this codebase — `decodeEnvelope`,
+  `decryptSessionRecord`, `validatePreKeyBundle` — checking that failures
+  are always a classified `ProtocolError`, never a raw exception or a
+  hang. Surfaced a genuine, benign-by-design finding: bundle validation
+  cannot catch a corrupted one-time prekey (it isn't signed in the wire
+  format), but PQXDH's own DH computation makes a corrupted OTK cause a
+  clean AEAD authentication failure downstream instead — proven end to
+  end by a dedicated test, not just asserted. See README/SECURITY.md.
+
 ## Phase 24 — Attachments
 
 - `src/attachments/attachmentCrypto.ts`: `encryptAttachment`/
