@@ -11,6 +11,21 @@ version of each phase — this file is the scannable index.
 
 Nothing in flight right now.
 
+## Phase 36 — Prekey bundle discovery, recorded as a deferred protocol v2 gap
+
+- `docs/spec.md` amended to acknowledge a real gap surfaced while writing
+  the integration guide: nothing in this protocol defines how a
+  `PreKeyBundle` actually gets from the device that generated it to the
+  device that wants to start a session with it. Recorded as its own
+  phase (36), not fixed here — it needs its own metadata-privacy analysis
+  (a naive per-identity content topic would leak exactly what Phase 21's
+  shared-topic design was built to avoid) and its own answer for
+  one-time-prekey reservation races under a directory model, and per
+  Phase 27's existing versioning discipline, ships as a new
+  `protocolVersion` when it's actually built — not a silent extension of
+  the current one. See the integration guide's "what this library does
+  not do" section for the practical, right-now consequence.
+
 ## Developer-facing integration guides
 
 - [docs/getting-started.md](docs/getting-started.md): a minimal two-party,

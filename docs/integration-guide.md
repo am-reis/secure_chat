@@ -290,7 +290,11 @@ through building an app:
    content topic, wire format, or directory service anywhere in this
    codebase for publishing or fetching one — you need a mechanism for
    that (a server, publishing over a Waku content topic yourself, a QR
-   code for a first contact, ...).
+   code for a first contact, ...). This is a recorded, deliberate gap,
+   not an oversight — see `docs/spec.md`'s Phase 36 for why it's planned
+   as a new protocol version rather than something to bolt onto the
+   current one, and the two directions worth evaluating when it's
+   actually scheduled.
 2. **Real key-at-rest storage.** `StaticMasterKeyProvider` is explicitly
    test-only; see "Persistence setup," above.
 3. **Prekey rotation policy.** This library generates prekeys and lets you

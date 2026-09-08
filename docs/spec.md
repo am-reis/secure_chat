@@ -1389,6 +1389,64 @@ Implement this as a separate protocol version rather than silently modifying the
 
 ---
 
+## Phase 36 — Prekey Bundle Discovery and Directory Service (Protocol v2)
+
+**Do not implement this in the first milestone.** Recorded here as a
+known, deliberate gap in the first implementation, not an oversight
+discovered late: `PQXDHInitiator`/`SessionManager.createSession` (Phase 5,
+Phase 9) both require the caller to already have the recipient's
+`PreKeyBundle` (Phase 4) in hand. Nothing in Phase 1 through Phase 35
+defines how a bundle actually gets from the device that generated it
+(Phase 3) to the device that wants to start a session with it. Every other
+piece of data this protocol moves — session envelopes, resets, receipts,
+attachment descriptors — has an explicit content-topic and wire-format
+answer (Phase 10, Phase 21). Bundle discovery does not, and that's a real
+gap in "Alice can establish a session while Bob is offline" (Phase 34's
+own Definition of Done), not just an application-integration detail.
+
+It is being deferred rather than retrofitted into the current protocol
+version for the same reason Phase 35 is: this needs its own explicit
+design, reviewed on its own terms, not one invented mid-implementation of
+something else. It also isn't a small addition — unlike a new message
+type (Phase 11's `optional later` list), a directory mechanism touches
+metadata-privacy analysis (Phase 21's own reasoning: a naive
+`/app/<identityId>/bundle` content topic would leak exactly the kind of
+"who has published an identity" information Phase 21 designed shared
+topics specifically to avoid), freshness/staleness semantics for
+published bundles, and — for one-time prekeys specifically — a
+consumption race that a passive directory doesn't solve on its own (two
+initiators fetching the "same" bundle concurrently must not be able to
+both consume the same one-time prekey; Phase 3's `AVAILABLE → RESERVED →
+CONSUMED` lifecycle assumes a single trusted party, the bundle's own
+owner, arbitrates reservation — a public directory serving bundles to
+arbitrary fetchers is a different trust structure).
+
+Two directions worth evaluating when this is actually scheduled, not a
+decision made here:
+
+1. **A dedicated Waku content topic per identity, sharded/rotated the way
+   Phase 21 already discusses as a real deployment's option for the
+   existing shared topics** — keeps everything on the same transport this
+   protocol already depends on, but needs its own metadata-privacy
+   analysis (a per-identity topic is inherently more linkable than the
+   current shared topics) and doesn't have an obvious answer for one-time
+   prekey reservation races without the identity's own device being
+   online to arbitrate.
+2. **A separate directory/lookup service**, outside Waku, that identities
+   publish signed bundles to and that can enforce one-time prekey
+   reservation server-side — closer to how Signal's own key server works,
+   at the cost of a centralized (or federated) component this
+   transport-agnostic core has otherwise avoided needing.
+
+Whatever is chosen, per Phase 27's existing versioning discipline: this
+is a wire-format and protocol-behavior change, so it ships as a new
+`protocolVersion` value, not a silent extension of the version this
+implementation currently speaks. `SUPPORTED_PROTOCOL_VERSIONS` already
+exists precisely to make an old client's explicit rejection of a v2-only
+message clean rather than a confusing failure deep in PQXDH processing.
+
+---
+
 ## Final Architecture
 
 The final system should have these boundaries:
