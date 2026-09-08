@@ -16,6 +16,7 @@
     "@noble/curves": "^2.4.0",
     "@noble/hashes": "^2.4.0",
     "@noble/post-quantum": "^0.7.1",
+    "@waku/sdk": "^0.0.36",
     "protobufjs": "^8.8.0"
   },
   "devDependencies": {
