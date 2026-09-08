@@ -4,8 +4,19 @@
   "description": "PQXDH + Double Ratchet secure messaging protocol core (transport-agnostic)",
   "type": "module",
   "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && mkdir -p dist/transport/proto && cp src/transport/proto/envelope.pb.js src/transport/proto/envelope.pb.d.ts dist/transport/proto/",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
