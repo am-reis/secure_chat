@@ -1,6 +1,6 @@
 {
   "name": "secure-messaging-protocol",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "PQXDH + Double Ratchet secure messaging protocol core (transport-agnostic)",
   "type": "module",
   "private": true,

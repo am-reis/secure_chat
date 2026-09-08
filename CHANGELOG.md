@@ -10,9 +10,13 @@ releases are actually tagged, and the [README](README.md#status) for the
 fuller, prose version of each phase — this file is the scannable index.
 
 **v0.1.0** (tag: `v0.1.0`) is the retroactive baseline covering everything
-below through the developer integration guides — tagged once the git
-workflow this project now follows was established, not because anything
-changed at that point.
+from Phase 0 through the developer integration guides — tagged once the
+git workflow this project now follows was established, not because
+anything changed at that point.
+
+**v0.2.0** (tag: `v0.2.0`) adds Phase 31 (all 8 security audit-prep
+documents) and Phase 36 (the prekey bundle discovery gap, recorded and
+deferred to a future protocol version) on top of v0.1.0.
 
 ## Unreleased
 
