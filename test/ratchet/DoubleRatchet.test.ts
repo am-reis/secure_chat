@@ -219,6 +219,47 @@ describe("Double Ratchet — out-of-order and skipped messages (Phase 8)", () =>
             expect((e as ProtocolError).code).toBe("MESSAGE_TOO_FAR_AHEAD");
         }
     });
+
+    it("rejects skipping past the global MAX_STORED_SKIPPED_KEYS cap, even spread across multiple calls each individually under MAX_SKIP", () => {
+        // MAX_SKIP (1000) bounds any single call; MAX_STORED_SKIPPED_KEYS
+        // (2000) is a separate, global, cumulative bound across the whole
+        // session — Invariant 3 ("a remote party cannot force unbounded key
+        // derivation") needs both, since neither alone stops an attacker
+        // from sending a slow drip of individually-small skips that adds up
+        // to unbounded storage. Pre-generate real messages so the first two
+        // (committing) calls have genuine ciphertext to decrypt — only the
+        // final, cap-tripping call can get away with a forged/garbage one,
+        // since the cap check fires mid-skip, before that call ever
+        // attempts its own target decrypt.
+        const { alice, bob } = setupPair();
+        const messages = Array.from({ length: 1999 }, (_, i) => ratchetEncrypt(provider, alice, utf8(`m${i}`), AD));
+
+        const m999 = messages[999]!;
+        ratchetDecrypt(provider, bob, m999.header, m999.ciphertext, AD);
+        expect(bob.receivingMessageNumber).toBe(1000);
+        expect(bob.skippedMessageKeys.size).toBe(999);
+
+        const m1998 = messages[1998]!;
+        ratchetDecrypt(provider, bob, m1998.header, m1998.ciphertext, AD);
+        expect(bob.receivingMessageNumber).toBe(1999);
+        expect(bob.skippedMessageKeys.size).toBe(1997);
+
+        const forgedHeader: RatchetHeader = {
+            ratchetPublicKey: m999.header.ratchetPublicKey,
+            previousChainLength: 0,
+            messageNumber: 2010, // well within MAX_SKIP of 1999, but crosses the 2000 global cap while skipping
+        };
+        const before = snapshot(bob);
+        try {
+            ratchetDecrypt(provider, bob, forgedHeader, new Uint8Array(32), AD);
+            expect.unreachable();
+        } catch (e) {
+            expect((e as ProtocolError).code).toBe("MESSAGE_TOO_FAR_AHEAD");
+        }
+        // Same Invariant 4 guarantee applies here too: the rejected call
+        // must not have partially grown the skipped-key store.
+        expect(snapshot(bob)).toEqual(before);
+    });
 });
 
 describe("Double Ratchet — Invariant 4: failed AEAD auth never mutates state", () => {
