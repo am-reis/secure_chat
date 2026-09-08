@@ -18,6 +18,12 @@ What exists today toward that eventually happening:
 - **Phase 30** — crash-recovery tests, including one that formalized a real
   defect (see the "Required reading" section of [README.md](README.md) and
   [CHANGELOG.md](CHANGELOG.md)) before it was fixed.
+- **Security invariants** — [docs/security-invariants.md](docs/security-invariants.md)
+  maps each of Phase 32's ten invariants to exactly what enforces it and
+  exactly what proves that enforcement holds (a runtime test, a type-level
+  guarantee, or a documented inspection), honestly noting the one place a
+  gap existed (Invariant 3's global skipped-key cap had no test until
+  writing this document surfaced that) instead of glossing over it.
 - **Fuzzing** — `test/fuzz/` runs random/malformed bytes at volume against
   the three boundaries where attacker- or corruption-controlled input first
   reaches this codebase (wire-format decode, persisted-session decrypt,
@@ -39,10 +45,8 @@ What's still outstanding before a real audit is meaningful (Phase 31 of
 4. Wire format specification
 5. Key lifecycle specification
 6. Persistence specification
-7. Security invariants doc (Phase 32's list, with each one mapped to the
-   test(s) that enforce it)
-8. Test vector suite (independently sourced, not just self-consistent)
-9. Dependency inventory (crypto libraries, provenance, version pinning)
+7. Test vector suite (independently sourced, not just self-consistent)
+8. Dependency inventory (crypto libraries, provenance, version pinning)
 
 ## Design principles this codebase tries to hold to
 

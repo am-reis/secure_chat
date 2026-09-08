@@ -203,6 +203,16 @@ after restart just decrypts correctly again.
   (`EnvelopeType.SESSION_RESET`, a new `signature` field) and
   `WakuMessagingClient` (a dedicated content topic, `resetSession()`, and
   an `onSessionReset` callback), not just at the `SessionManager` layer.
+- **Phase 32 — security invariants**: [docs/security-invariants.md](docs/security-invariants.md)
+  maps each of the spec's ten invariants to what actually enforces it and
+  what proves that enforcement holds — a runtime test, a type-level
+  guarantee the compiler enforces, or a documented repo-wide search for
+  something that must never appear (a logged key, a private key reaching
+  the transport layer). Writing it surfaced a real gap: the global
+  `MAX_STORED_SKIPPED_KEYS` cap (Invariant 3) had been enforced in code
+  since the ratchet was first built but had no test at all, only the
+  per-call `MAX_SKIP` bound did — closed with a new regression test rather
+  than just noted and left.
 - **Fuzzing** (Phase 33's implementation-order item 20, distinct from
   Phase 29's targeted property tests): `test/fuzz/` feeds genuinely
   random/malformed bytes, at volume, at the three boundaries where
@@ -288,7 +298,8 @@ npm test                # vitest run
 npm run proto:generate  # regenerate src/transport/proto/envelope.pb.{js,d.ts} after editing envelope.proto
 ```
 
-All tests currently pass (268 as of adding fuzz testing). No
+All tests currently pass (269, including a new regression test the
+security-invariants review itself motivated). No
 network access is required
 to run the tests — the RFC/NIST vectors baked into the crypto tests were
 verified against independent implementations (Node's `crypto`, Python's

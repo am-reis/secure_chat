@@ -11,6 +11,23 @@ version of each phase — this file is the scannable index.
 
 Nothing in flight right now.
 
+## Phase 32 — Security invariants
+
+- [docs/security-invariants.md](docs/security-invariants.md): each of the
+  spec's ten invariants mapped to what enforces it and what proves that
+  enforcement holds — runtime test, type-level guarantee, or a documented
+  repo-wide search for an absence (a logged key, a private key reaching
+  the transport layer).
+- **Found and fixed while writing it**: `MAX_STORED_SKIPPED_KEYS` (the
+  global, cumulative skipped-key cap — distinct from the per-call
+  `MAX_SKIP` bound) had been enforced in `src/ratchet/DoubleRatchet.ts`
+  since the ratchet was first built, but had no test proving it actually
+  worked. Added a regression test
+  (`test/ratchet/DoubleRatchet.test.ts`) that accumulates skipped keys
+  across multiple calls, each individually under `MAX_SKIP`, and confirms
+  the global cap still trips — and that the rejected call doesn't
+  partially mutate state either (Invariant 4).
+
 ## Fuzzing
 
 - `test/fuzz/`: random/malformed-byte fuzzing (fast-check, thousands of
