@@ -10,7 +10,15 @@ import { ratchetInitAlice, ratchetInitBob, ratchetEncrypt, ratchetDecrypt } from
 import { bytesToHex } from "../encoding/canonical.js";
 import { ProtocolError } from "../errors.js";
 import { buildSessionAssociatedData } from "./associatedData.js";
-import type { Session, SessionId, MessageEnvelope, SessionInitEnvelope, MessageEnvelopeData } from "./types.js";
+import { signSessionReset, verifySessionReset } from "./reset.js";
+import type {
+    Session,
+    SessionId,
+    MessageEnvelope,
+    SessionInitEnvelope,
+    MessageEnvelopeData,
+    SessionResetEnvelope,
+} from "./types.js";
 
 /**
  * Bob-side lookup for his own local signed/PQ prekey records by id
@@ -177,6 +185,103 @@ export class SessionManager {
             ratchetHeader: header,
             ciphertext,
         };
+    }
+
+    /**
+     * Phase 19: destroy local session state — root key, both chain keys,
+     * the DH ratchet private key, and every stored skipped message key —
+     * when cryptographic state is uncertain (storage corruption, device
+     * restore, excessive skipped-message state, explicit user action).
+     * Per Phase 32 Invariant 6 ("old message keys are deleted") and
+     * Invariant 7 ("ratchet private keys are never serialized into logs"),
+     * this zeroes the material via `secureErase` rather than just dropping
+     * the map entry and leaving it to the GC.
+     *
+     * Returns a SESSION_RESET envelope, signed with the long-term identity
+     * key so the peer can verify it really came from them — signing here
+     * cannot itself fail because of the corruption being reset from, since
+     * it depends on none of the state above. Sending it is the caller's
+     * concern (see WakuMessagingClient.resetSession); this method only
+     * touches local state.
+     */
+    resetSession(sessionId: SessionId): SessionResetEnvelope {
+        const key = bytesToHex(sessionId);
+        const session = this.sessions.get(key);
+        if (!session) {
+            throw new ProtocolError("Unknown session", "UNKNOWN_SESSION");
+        }
+
+        const signature = signSessionReset(
+            this.provider,
+            this.localIdentity.keyPair.privateKey,
+            session.protocolVersion,
+            sessionId,
+        );
+
+        this.destroySessionState(session);
+        this.sessions.delete(key);
+
+        return {
+            type: "SESSION_RESET",
+            protocolVersion: session.protocolVersion,
+            sessionId,
+            signature,
+        };
+    }
+
+    /**
+     * Peer-initiated reset (Phase 19): the remote party has signaled that
+     * their side of this session is gone. Verified against the identity key
+     * already on file for this session — never destroy live session state
+     * on the strength of an unauthenticated request, the same DoS concern
+     * Phase 23 raises for auto-creating a session from an arbitrary
+     * message, mirrored here for destruction. An unknown sessionId throws
+     * rather than silently no-oping: there's nothing to destroy, and no
+     * identity key on file to verify against even if there were.
+     *
+     * On a failed signature check, session state is left untouched — same
+     * "failed authentication must not mutate state" invariant Phase 6/32
+     * apply everywhere else in this protocol.
+     */
+    receiveSessionReset(envelope: SessionResetEnvelope): void {
+        if (!SUPPORTED_PROTOCOL_VERSIONS.has(envelope.protocolVersion)) {
+            throw new ProtocolError(
+                `Unsupported protocol version: ${envelope.protocolVersion}`,
+                "UNSUPPORTED_VERSION",
+            );
+        }
+
+        const key = bytesToHex(envelope.sessionId);
+        const session = this.sessions.get(key);
+        if (!session) {
+            throw new ProtocolError("Unknown session for SESSION_RESET envelope", "UNKNOWN_SESSION");
+        }
+
+        const valid = verifySessionReset(
+            this.provider,
+            session.remoteIdentityPublicKey,
+            envelope.protocolVersion,
+            envelope.sessionId,
+            envelope.signature,
+        );
+        if (!valid) {
+            throw new ProtocolError("Invalid signature on SESSION_RESET envelope", "INVALID_SIGNATURE");
+        }
+
+        this.destroySessionState(session);
+        this.sessions.delete(key);
+    }
+
+    private destroySessionState(session: Session): void {
+        const state = session.ratchetState;
+        this.provider.secureErase(state.rootKey);
+        this.provider.secureErase(state.DHs.privateKey);
+        if (state.sendingChainKey) this.provider.secureErase(state.sendingChainKey);
+        if (state.receivingChainKey) this.provider.secureErase(state.receivingChainKey);
+        for (const messageKey of state.skippedMessageKeys.values()) {
+            this.provider.secureErase(messageKey);
+        }
+        state.skippedMessageKeys.clear();
     }
 
     private decryptOnExistingSession(

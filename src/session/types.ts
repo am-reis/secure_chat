@@ -58,3 +58,28 @@ export interface MessageEnvelopeData {
     ratchetHeader: RatchetHeader;
     ciphertext: Uint8Array;
 }
+
+/**
+ * Phase 19 (Session Reset). Notifies the peer that this side has destroyed
+ * its session state (corruption, device restore, lost ratchet state,
+ * excessive skipped-message state, explicit user action, etc.) so it can
+ * destroy its own copy rather than keep sending into a session that no
+ * longer exists on this end. Deliberately carries no ciphertext or ratchet
+ * header — see reset.ts for why this is authenticated with the long-term
+ * identity key instead of the (possibly-uncertain) ratchet state.
+ */
+export interface SessionResetEnvelope {
+    type: "SESSION_RESET";
+    protocolVersion: number;
+    sessionId: SessionId;
+    signature: Uint8Array;
+}
+
+/**
+ * Every envelope type the transport layer needs to route (Phase 22), as
+ * opposed to `MessageEnvelope`, which is deliberately narrower — it's what
+ * `SessionManager.receiveMessage` accepts, and SESSION_RESET is handled by
+ * the separate `receiveSessionReset` (see SessionManager.ts) rather than
+ * folded into that method's return shape.
+ */
+export type AnyEnvelope = MessageEnvelope | SessionResetEnvelope;

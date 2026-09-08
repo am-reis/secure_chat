@@ -1,5 +1,10 @@
 import { securemessaging } from "./proto/envelope.pb.js";
-import type { MessageEnvelope, SessionInitEnvelope, MessageEnvelopeData } from "../session/types.js";
+import type {
+    AnyEnvelope,
+    SessionInitEnvelope,
+    MessageEnvelopeData,
+    SessionResetEnvelope,
+} from "../session/types.js";
 import type { RatchetHeader } from "../ratchet/types.js";
 import { ProtocolError } from "../errors.js";
 
@@ -41,7 +46,17 @@ function decodeHeader(h: DecodableHeader | null | undefined): RatchetHeader {
     };
 }
 
-export function encodeEnvelope(envelope: MessageEnvelope): Uint8Array {
+export function encodeEnvelope(envelope: AnyEnvelope): Uint8Array {
+    if (envelope.type === "SESSION_RESET") {
+        const proto = new EnvelopeProto({
+            type: EnvelopeType.SESSION_RESET,
+            protocolVersion: envelope.protocolVersion,
+            sessionId: envelope.sessionId,
+            signature: envelope.signature,
+        });
+        return EnvelopeProto.encode(proto).finish();
+    }
+
     if (envelope.type === "SESSION_INIT") {
         const proto = new EnvelopeProto({
             type: EnvelopeType.SESSION_INIT,
@@ -74,7 +89,7 @@ export function encodeEnvelope(envelope: MessageEnvelope): Uint8Array {
     return EnvelopeProto.encode(proto).finish();
 }
 
-export function decodeEnvelope(bytes: Uint8Array): MessageEnvelope {
+export function decodeEnvelope(bytes: Uint8Array): AnyEnvelope {
     let proto: InstanceType<typeof EnvelopeProto>;
     try {
         proto = EnvelopeProto.decode(bytes);
@@ -114,6 +129,19 @@ export function decodeEnvelope(bytes: Uint8Array): MessageEnvelope {
             sessionId: proto.sessionId,
             ratchetHeader: decodeHeader(proto.ratchetHeader),
             ciphertext: proto.ciphertext,
+        };
+        return envelope;
+    }
+
+    if (proto.type === EnvelopeType.SESSION_RESET) {
+        if (!proto.signature || proto.signature.length === 0) {
+            throw new ProtocolError("SESSION_RESET envelope is missing its signature", "INVALID_FORMAT");
+        }
+        const envelope: SessionResetEnvelope = {
+            type: "SESSION_RESET",
+            protocolVersion: proto.protocolVersion,
+            sessionId: proto.sessionId,
+            signature: proto.signature,
         };
         return envelope;
     }

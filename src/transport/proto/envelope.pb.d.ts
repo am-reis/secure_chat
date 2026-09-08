@@ -146,7 +146,10 @@ export namespace securemessaging {
             SESSION_INIT = 1,
 
             /** MESSAGE value */
-            MESSAGE = 2
+            MESSAGE = 2,
+
+            /** SESSION_RESET value */
+            SESSION_RESET = 3
         }
 
         /**
@@ -200,6 +203,9 @@ export namespace securemessaging {
 
             /** EnvelopeProto pqPrekeyId. */
             pqPrekeyId: number;
+
+            /** EnvelopeProto signature. */
+            signature: Uint8Array;
 
             /**
              * Creates a new EnvelopeProto instance using the specified properties.
@@ -317,6 +323,9 @@ export namespace securemessaging {
 
                 /** EnvelopeProto pqPrekeyId */
                 pqPrekeyId?: (number|null);
+
+                /** EnvelopeProto signature */
+                signature?: (Uint8Array|null);
 
                 /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];

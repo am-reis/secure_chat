@@ -14,6 +14,7 @@ enum EnvelopeType {
     ENVELOPE_TYPE_UNSPECIFIED = 0; // never used on the wire; catches a missing/corrupt type field explicitly rather than silently defaulting to a real type
     SESSION_INIT = 1;
     MESSAGE = 2;
+    SESSION_RESET = 3; // Phase 19
 }
 
 // Phase 10's EncryptedMessage, adapted to the fields this implementation
@@ -41,4 +42,10 @@ message EnvelopeProto {
     uint32 signed_prekey_id = 9;
     optional uint32 one_time_prekey_id = 10;
     uint32 pq_prekey_id = 11;
+
+    // Populated only for SESSION_RESET (Phase 19): an Ed25519 signature by
+    // the sender's long-term identity key over (domain, protocol_version,
+    // session_id) — see src/session/reset.ts. Left at its zero value for
+    // every other envelope type.
+    bytes signature = 12;
 }

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { encodeEnvelope, decodeEnvelope } from "../../src/transport/protoEnvelopeCodec.js";
-import type { SessionInitEnvelope, MessageEnvelopeData } from "../../src/session/types.js";
+import type { SessionInitEnvelope, MessageEnvelopeData, SessionResetEnvelope } from "../../src/session/types.js";
+import { ProtocolError } from "../../src/errors.js";
 
 const toHex = (b: Uint8Array) => Buffer.from(b).toString("hex");
 const rand = (n: number) => crypto.getRandomValues(new Uint8Array(n));
@@ -85,6 +86,19 @@ describe("protoEnvelopeCodec — round trip", () => {
         expect(decoded.ratchetHeader.previousChainLength).toBe(999_999);
         expect(decoded.ratchetHeader.messageNumber).toBe(4_000_000_000);
     });
+
+    it("round-trips a SESSION_RESET envelope", () => {
+        const original: SessionResetEnvelope = {
+            type: "SESSION_RESET",
+            protocolVersion: 1,
+            sessionId: rand(32),
+            signature: rand(64),
+        };
+        const decoded = decodeEnvelope(encodeEnvelope(original)) as SessionResetEnvelope;
+        expect(decoded.type).toBe("SESSION_RESET");
+        expect(toHex(decoded.sessionId)).toBe(toHex(original.sessionId));
+        expect(toHex(decoded.signature)).toBe(toHex(original.signature));
+    });
 });
 
 describe("protoEnvelopeCodec — binary format properties", () => {
@@ -166,9 +180,22 @@ describe("protoEnvelopeCodec — malformed input handling", () => {
             // If it didn't throw, the type field must still be a real,
             // recognized one — not something bogus slipping through as
             // 'valid enough'.
-            expect(["SESSION_INIT", "MESSAGE"]).toContain(decoded.type);
+            expect(["SESSION_INIT", "MESSAGE", "SESSION_RESET"]).toContain(decoded.type);
         } catch {
             // Throwing is an equally acceptable, safe outcome here.
+        }
+    });
+
+    it("rejects a SESSION_RESET envelope with no signature", () => {
+        // type=SESSION_RESET (field 1, varint 3), protocol_version=1
+        // (field 2, varint 1), session_id (field 3) — no field 12
+        // (signature) present at all.
+        const proto = new Uint8Array([0x08, 0x03, 0x10, 0x01, 0x1a, 0x02, 0xaa, 0xbb]);
+        try {
+            decodeEnvelope(proto);
+            expect.unreachable();
+        } catch (e) {
+            expect((e as ProtocolError).code).toBe("INVALID_FORMAT");
         }
     });
 });

@@ -376,12 +376,14 @@ export const securemessaging = $root.securemessaging = (() => {
          * @property {number} ENVELOPE_TYPE_UNSPECIFIED=0 ENVELOPE_TYPE_UNSPECIFIED value
          * @property {number} SESSION_INIT=1 SESSION_INIT value
          * @property {number} MESSAGE=2 MESSAGE value
+         * @property {number} SESSION_RESET=3 SESSION_RESET value
          */
         v1.EnvelopeType = (function() {
             const valuesById = $Object.create(null), values = $Object.create(valuesById);
             values[valuesById[0] = "ENVELOPE_TYPE_UNSPECIFIED"] = 0;
             values[valuesById[1] = "SESSION_INIT"] = 1;
             values[valuesById[2] = "MESSAGE"] = 2;
+            values[valuesById[3] = "SESSION_RESET"] = 3;
             return values;
         })();
 
@@ -401,6 +403,7 @@ export const securemessaging = $root.securemessaging = (() => {
              * @property {number|null} [signedPrekeyId] EnvelopeProto signedPrekeyId
              * @property {number|null} [oneTimePrekeyId] EnvelopeProto oneTimePrekeyId
              * @property {number|null} [pqPrekeyId] EnvelopeProto pqPrekeyId
+             * @property {Uint8Array|null} [signature] EnvelopeProto signature
              * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
              */
 
@@ -520,6 +523,14 @@ export const securemessaging = $root.securemessaging = (() => {
              */
             EnvelopeProto.prototype.pqPrekeyId = 0;
 
+            /**
+             * EnvelopeProto signature.
+             * @member {Uint8Array} signature
+             * @memberof securemessaging.v1.EnvelopeProto
+             * @instance
+             */
+            EnvelopeProto.prototype.signature = $util.newBuffer([]);
+
             // OneOf field names bound to virtual getters and setters
             let $oneOfFields;
 
@@ -583,6 +594,8 @@ export const securemessaging = $root.securemessaging = (() => {
                     writer.uint32(/* id 10, wireType 0 =*/80).uint32(message.oneTimePrekeyId);
                 if (message.pqPrekeyId != null && $Object.hasOwnProperty.call(message, "pqPrekeyId") && message.pqPrekeyId !== 0)
                     writer.uint32(/* id 11, wireType 0 =*/88).uint32(message.pqPrekeyId);
+                if (message.signature != null && $Object.hasOwnProperty.call(message, "signature") && message.signature.length)
+                    writer.uint32(/* id 12, wireType 2 =*/98).bytes(message.signature);
                 if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                     for (let i = 0; i < message.$unknowns.length; ++i)
                         writer.raw(message.$unknowns[i]);
@@ -734,6 +747,15 @@ export const securemessaging = $root.securemessaging = (() => {
                                 delete message.pqPrekeyId;
                             continue;
                         }
+                    case 12: {
+                            if (wireType !== 2)
+                                break;
+                            if ((value = reader.bytes()).length)
+                                message.signature = value;
+                            else
+                                delete message.signature;
+                            continue;
+                        }
                     }
                     reader.skipType(wireType, _depth, tag);
                     if (!reader.discardUnknown) {
@@ -820,6 +842,9 @@ export const securemessaging = $root.securemessaging = (() => {
                 if (message.pqPrekeyId != null && $Object.hasOwnProperty.call(message, "pqPrekeyId"))
                     if (!$util.isInteger(message.pqPrekeyId))
                         return "pqPrekeyId: integer expected";
+                if (message.signature != null && $Object.hasOwnProperty.call(message, "signature"))
+                    if (!(message.signature && typeof message.signature.length === "number" || $util.isString(message.signature)))
+                        return "signature: buffer expected";
                 return null;
             };
 
@@ -854,6 +879,10 @@ export const securemessaging = $root.securemessaging = (() => {
                     case "MESSAGE":
                     case 2:
                         message.type = 2;
+                        break;
+                    case "SESSION_RESET":
+                    case 3:
+                        message.type = 3;
                         break;
                     default:
                         if (typeof object.type === "number" && (object.type | 0) === object.type)
@@ -905,6 +934,12 @@ export const securemessaging = $root.securemessaging = (() => {
                 if (object.pqPrekeyId != null)
                     if ($Number(object.pqPrekeyId) !== 0)
                         message.pqPrekeyId = object.pqPrekeyId >>> 0;
+                if (object.signature != null)
+                    if (object.signature.length)
+                        if (typeof object.signature === "string")
+                            $util.base64.decode(object.signature, message.signature = $util.newBuffer($util.base64.length(object.signature)), 0);
+                        else if (object.signature.length >= 0)
+                            message.signature = object.signature;
                 return message;
             };
 
@@ -966,6 +1001,13 @@ export const securemessaging = $root.securemessaging = (() => {
                     }
                     object.signedPrekeyId = 0;
                     object.pqPrekeyId = 0;
+                    if (options.bytes === $String)
+                        object.signature = "";
+                    else {
+                        object.signature = [];
+                        if (options.bytes !== $Array)
+                            object.signature = $util.newBuffer(object.signature);
+                    }
                 }
                 if (message.type != null && $Object.hasOwnProperty.call(message, "type"))
                     object.type = options.enums === $String ? $root.securemessaging.v1.EnvelopeType[message.type] === $undefined ? message.type : $root.securemessaging.v1.EnvelopeType[message.type] : message.type;
@@ -989,6 +1031,8 @@ export const securemessaging = $root.securemessaging = (() => {
                     object.oneTimePrekeyId = message.oneTimePrekeyId;
                 if (message.pqPrekeyId != null && $Object.hasOwnProperty.call(message, "pqPrekeyId"))
                     object.pqPrekeyId = message.pqPrekeyId;
+                if (message.signature != null && $Object.hasOwnProperty.call(message, "signature"))
+                    object.signature = options.bytes === $String ? $util.base64.encode(message.signature, 0, message.signature.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.signature) : message.signature;
                 return object;
             };
 

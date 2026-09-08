@@ -32,3 +32,7 @@ export function sessionInitContentTopic(protocolVersion: number = CURRENT_PROTOC
 export function messageContentTopic(protocolVersion: number = CURRENT_PROTOCOL_VERSION): string {
     return `/${APP_NAME}/${protocolVersion}/message/proto`;
 }
+
+export function sessionResetContentTopic(protocolVersion: number = CURRENT_PROTOCOL_VERSION): string {
+    return `/${APP_NAME}/${protocolVersion}/session-reset/proto`;
+}

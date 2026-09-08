@@ -2,13 +2,19 @@ import type { SessionManager } from "../session/SessionManager.js";
 import type { PreKeyBundle } from "../prekeys/PreKeyBundle.js";
 import type { Session, SessionId } from "../session/types.js";
 import type { WakuTransport, WakuMessage } from "./WakuTransport.js";
-import { sessionInitContentTopic, messageContentTopic } from "./contentTopics.js";
+import { sessionInitContentTopic, messageContentTopic, sessionResetContentTopic } from "./contentTopics.js";
 import { encodeEnvelope, decodeEnvelope } from "./protoEnvelopeCodec.js";
 import { CURRENT_PROTOCOL_VERSION } from "../prekeys/PreKeyBundle.js";
 
 export interface WakuMessagingClientOptions {
     protocolVersion?: number;
     onMessage?: (sessionId: SessionId, plaintext: Uint8Array) => void;
+    /**
+     * Called when a peer-initiated SESSION_RESET (Phase 19) is verified and
+     * applied — i.e. the local session with this id has just been
+     * destroyed because the peer signaled theirs is gone.
+     */
+    onSessionReset?: (sessionId: SessionId) => void;
     /**
      * Called for any envelope that fails to decode or fails
      * SessionManager processing (malformed, replayed, tampered, unknown
@@ -30,6 +36,7 @@ export interface WakuMessagingClientOptions {
 export class WakuMessagingClient {
     private readonly protocolVersion: number;
     private readonly onMessage: WakuMessagingClientOptions["onMessage"];
+    private readonly onSessionReset: WakuMessagingClientOptions["onSessionReset"];
     private readonly onError: WakuMessagingClientOptions["onError"];
     private readonly unsubscribes: Array<() => void> = [];
 
@@ -40,6 +47,7 @@ export class WakuMessagingClient {
     ) {
         this.protocolVersion = options.protocolVersion ?? CURRENT_PROTOCOL_VERSION;
         this.onMessage = options.onMessage;
+        this.onSessionReset = options.onSessionReset;
         this.onError = options.onError;
     }
 
@@ -47,9 +55,11 @@ export class WakuMessagingClient {
         await this.transport.connect();
         const initTopic = sessionInitContentTopic(this.protocolVersion);
         const msgTopic = messageContentTopic(this.protocolVersion);
+        const resetTopic = sessionResetContentTopic(this.protocolVersion);
         this.unsubscribes.push(
             await this.transport.subscribe(initTopic, (m) => this.handleIncoming(m)),
             await this.transport.subscribe(msgTopic, (m) => this.handleIncoming(m)),
+            await this.transport.subscribe(resetTopic, (m) => this.handleIncoming(m)),
         );
     }
 
@@ -62,6 +72,11 @@ export class WakuMessagingClient {
     private handleIncoming(message: WakuMessage): void {
         try {
             const envelope = decodeEnvelope(message.payload);
+            if (envelope.type === "SESSION_RESET") {
+                this.sessionManager.receiveSessionReset(envelope);
+                this.onSessionReset?.(envelope.sessionId);
+                return;
+            }
             const { session, plaintext } = this.sessionManager.receiveMessage(envelope);
             this.onMessage?.(session.sessionId, plaintext);
         } catch (err) {
@@ -83,6 +98,19 @@ export class WakuMessagingClient {
     }
 
     /**
+     * Phase 19: destroy local session state and notify the peer. Local
+     * destruction happens (via `sessionManager.resetSession`) regardless of
+     * whether the publish below actually reaches the peer — the state was
+     * already deemed uncertain, so keeping it around locally doesn't help
+     * either way; the notification is a courtesy so the peer stops sending
+     * into a session that's already gone on this end.
+     */
+    async resetSession(sessionId: SessionId): Promise<void> {
+        const envelope = this.sessionManager.resetSession(sessionId);
+        await this.transport.publish(sessionResetContentTopic(envelope.protocolVersion), encodeEnvelope(envelope));
+    }
+
+    /**
      * Phase 16 / real Store-recommended usage pattern: on reconnect, pull
      * history for both content topics and feed each through the same
      * decode-and-process path as a live message. Store's own incompleteness
@@ -92,7 +120,11 @@ export class WakuMessagingClient {
      * real Waku.
      */
     async syncMissedMessages(sinceMs?: number): Promise<void> {
-        const topics = [sessionInitContentTopic(this.protocolVersion), messageContentTopic(this.protocolVersion)];
+        const topics = [
+            sessionInitContentTopic(this.protocolVersion),
+            messageContentTopic(this.protocolVersion),
+            sessionResetContentTopic(this.protocolVersion),
+        ];
         for (const topic of topics) {
             const history = await this.transport.retrieveHistory(topic, sinceMs !== undefined ? { since: sinceMs } : undefined);
             for (const message of history) this.handleIncoming(message);
