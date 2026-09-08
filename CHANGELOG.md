@@ -9,16 +9,30 @@ version of each phase — this file is the scannable index.
 
 ## Unreleased
 
-### Added
+Nothing in flight right now.
 
-- **Phase 19 — Session reset.** `SessionManager.resetSession` /
-  `receiveSessionReset` destroy local session state (root key, chain keys,
-  DH private key, all skipped keys — securely erased, not just dropped)
-  when cryptographic state is uncertain, and notify the peer with a
-  `SESSION_RESET` envelope authenticated by the sender's long-term identity
-  key rather than the ratchet state itself. Wired through the wire format
-  (`EnvelopeType.SESSION_RESET`) and `WakuMessagingClient`
-  (`resetSession()`, a dedicated content topic, `onSessionReset`).
+## Phase 24 — Attachments
+
+- `src/attachments/attachmentCrypto.ts`: `encryptAttachment`/
+  `decryptAttachment` encrypt an attachment under its own fresh random key
+  and verify a digest of the *encrypted* blob before decrypting (defense
+  against a storage backend serving back a substituted attachment). The
+  resulting `AttachmentDescriptor` travels as a new `ATTACHMENT` kind on
+  the existing `ApplicationContent` wrapper
+  (`src/receipts/applicationContent.ts`), reusing the same "ordinary
+  encrypted Double Ratchet message" mechanism Phase 26 built for receipts —
+  no SessionManager or wire-format changes needed.
+
+## Phase 19 — Session reset
+
+- `SessionManager.resetSession`/`receiveSessionReset` destroy local session
+  state (root key, chain keys, DH private key, all skipped keys — securely
+  erased, not just dropped) when cryptographic state is uncertain, and
+  notify the peer with a `SESSION_RESET` envelope authenticated by the
+  sender's long-term identity key rather than the ratchet state itself.
+  Wired through the wire format (`EnvelopeType.SESSION_RESET`) and
+  `WakuMessagingClient` (`resetSession()`, a dedicated content topic,
+  `onSessionReset`).
 
 ## Phase 10 — Real (protobuf) wire format
 

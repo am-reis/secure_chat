@@ -203,6 +203,23 @@ after restart just decrypts correctly again.
   (`EnvelopeType.SESSION_RESET`, a new `signature` field) and
   `WakuMessagingClient` (a dedicated content topic, `resetSession()`, and
   an `onSessionReset` callback), not just at the `SessionManager` layer.
+- **Phase 24 — attachments**: `src/attachments/attachmentCrypto.ts`
+  implements the spec's flow — encrypt the attachment under its own fresh
+  random key, hand the caller the ciphertext to upload, and let
+  `AttachmentDescriptor` (key, hash, size, mimeType, objectId) travel as
+  ordinary structured content via the same `ApplicationContent` wrapper
+  Phase 26 built for receipts (`src/receipts/applicationContent.ts`'s new
+  `ATTACHMENT` kind) — "the entire descriptor must be encrypted inside the
+  Double Ratchet message," so no new SessionManager/wire-format surface was
+  needed, only a new content kind. `objectId` is deliberately NOT produced
+  by this module: encryption and upload are separate steps, and which
+  object-storage backend to integrate with is out of scope for this
+  transport-agnostic core (same reasoning as the mock-vs-real Waku split).
+  `hash` is a digest of the *encrypted* blob, checked before decryption —
+  the recipient's only defense against a storage backend serving back a
+  substituted blob under a different attachment's key, which could
+  plausibly decrypt to garbage without necessarily surfacing as an AEAD
+  failure the caller expects to mean "tampered."
 - **Phase 10 — real (protobuf) wire format**: replaces the earlier JSON
   placeholder codec entirely. Chosen over hand-rolling a binary format
   (despite already having the length-prefixed encoding primitives to do
@@ -215,8 +232,8 @@ after restart just decrypts correctly again.
   the identical `encodeEnvelope`/`decodeEnvelope` signatures the JSON
   placeholder had, so nothing above the transport boundary changed.
 
-Not yet built: real `js-waku` integration, attachments (Phase 24), and
-multi-device — see `docs/spec.md`'s Phase 33 implementation order and
+Not yet built: real `js-waku` integration and multi-device — see
+`docs/spec.md`'s Phase 33 implementation order and
 [CHANGELOG.md](CHANGELOG.md) for what's landed so far.
 
 ## Structure
@@ -234,7 +251,9 @@ src/
   persistence/   Encrypted-at-rest session storage (Phase 13)
   transport/     Mock Waku transport, fault injection, content topics, messaging
                  client, protobuf wire format (Phase 10/20/21/28.4)
-  receipts/      Delivery/read receipts as ordinary encrypted messages (Phase 26)
+  receipts/      Delivery/read receipts + the ApplicationContent wrapper
+                 (also carries attachment descriptors) (Phase 26/24)
+  attachments/   Attachment encryption/decryption + descriptor type (Phase 24)
   errors.ts      Shared protocol error taxonomy (Phase 17 codes)
 test/            Mirrors src/, one test file per module
 ```
@@ -248,7 +267,7 @@ npm test                # vitest run
 npm run proto:generate  # regenerate src/transport/proto/envelope.pb.{js,d.ts} after editing envelope.proto
 ```
 
-All tests currently pass (248 as of Phase 19's session reset). No
+All tests currently pass (256 as of Phase 24's attachments). No
 network access is required
 to run the tests — the RFC/NIST vectors baked into the crypto tests were
 verified against independent implementations (Node's `crypto`, Python's
