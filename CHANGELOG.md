@@ -18,6 +18,32 @@ changed at that point.
 
 Nothing in flight right now.
 
+## Phase 31 — Security audit preparation
+
+- All 8 of Phase 31's audit-prep documents, under `docs/audit/`: threat
+  model, cryptographic design, protocol state machine, wire format, key
+  lifecycle, persistence spec, test vector suite, dependency inventory.
+  These prepare for a real third-party audit; they don't substitute for
+  one — `SECURITY.md`'s status doesn't change until that actually
+  happens.
+- **The single most important finding across all 8**: `@noble/post-quantum`
+  (ML-KEM-1024, the entire reason this protocol is post-quantum) has not
+  been independently audited (per its own README) — the *dependency
+  inventory* document's finding — and this project's own test suite has
+  no independently-sourced test vectors for ML-KEM either, only
+  self-consistency (round-trip, tamper-behavior) checks — the *test
+  vector suite* document's finding. Same underlying gap, surfaced twice
+  from two different angles rather than once and forgotten.
+- Also surfaced: skipped message keys have no time-based expiry, only
+  size bounds, against `docs/spec.md`'s own stated four-trigger deletion
+  policy (key lifecycle document); and PQXDH's identity-binding
+  authenticates a session to whatever keys went into it, not that those
+  keys belong to the humans the parties believe they're talking to —
+  the existing fingerprint-verification mechanism (Phase 2.2) closes
+  that gap only if an application actually surfaces it, which nothing in
+  this codebase forces (threat model document's "First-contact trust"
+  section).
+
 ## Phase 36 — Prekey bundle discovery, recorded as a deferred protocol v2 gap
 
 - `docs/spec.md` amended to acknowledge a real gap surfaced while writing

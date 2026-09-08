@@ -248,6 +248,19 @@ after restart just decrypts correctly again.
   (`EnvelopeType.SESSION_RESET`, a new `signature` field) and
   `WakuMessagingClient` (a dedicated content topic, `resetSession()`, and
   an `onSessionReset` callback), not just at the `SessionManager` layer.
+- **Phase 31 — security audit preparation**: all 8 of Phase 31's
+  documents now exist under `docs/audit/` (threat model, cryptographic
+  design, protocol state machine, wire format, key lifecycle,
+  persistence, test vector suite, dependency inventory) — see
+  [SECURITY.md](SECURITY.md) for the full list and links. These are
+  preparation for a real third-party audit, not a substitute for one —
+  the audit itself hasn't happened. Two findings surfaced while writing
+  them, cross-referenced across the set rather than each rediscovered
+  independently: `@noble/post-quantum` (ML-KEM-1024) is the one
+  primitive in this dependency tree without an independent security
+  audit *and* the one primitive in this project's own test suite
+  without independently-sourced test vectors — the same gap, showing up
+  twice from two different angles.
 - **Phase 32 — security invariants**: [docs/security-invariants.md](docs/security-invariants.md)
   maps each of the spec's ten invariants to what actually enforces it and
   what proves that enforcement holds — a runtime test, a type-level

@@ -47,19 +47,47 @@ calls into `uuid`; the exposure, if any, is entirely inside js-waku's own
 internals. Re-run `npm audit` before deploying `RealWakuTransport` and
 check whether this has since been resolved upstream.
 
-What's still outstanding before a real audit is meaningful (Phase 31 of
-[docs/spec.md](docs/spec.md)):
+All 8 of Phase 31's audit-preparation documents now exist, under
+`docs/audit/`:
 
-1. Threat model (write-up, not just the informal notes in Phase 0)
-2. Cryptographic design document
-3. Protocol state machine diagram
-4. Wire format specification
-5. Key lifecycle specification
-6. Persistence specification
-7. Test vector suite (independently sourced, not just self-consistent)
-8. Dependency inventory (crypto libraries, provenance, version pinning —
-   now includes `@waku/sdk` and its own dependency tree, not just the
-   `@noble/*` crypto libraries)
+1. [Threat model](docs/audit/threat-model.md) — every Phase 0 adversary
+   capability mapped to its actual defense, plus an honest "out of
+   scope" section (live device compromise, transport metadata, first-
+   contact bundle authenticity, side channels, multi-device).
+2. [Cryptographic design document](docs/audit/cryptographic-design.md) —
+   every KDF/AEAD/AD construction with exact formulas and source
+   pointers.
+3. [Protocol state machine](docs/audit/protocol-state-machine.md) —
+   session state (deliberately binary, no partial states), ratchet field
+   validity, envelope routing, and the Phase 25 delivery-state model
+   (specified, not implemented at this layer).
+4. [Wire format specification](docs/audit/wire-format.md) — the protobuf
+   envelope, field by field, plus the canonical byte encoding used for
+   every signed/AD payload.
+5. [Key lifecycle specification](docs/audit/key-lifecycle.md) — every key
+   type's generation/rotation/destruction, including a real gap found
+   while writing it (skipped message keys have no time-based expiry,
+   only size bounds).
+6. [Persistence specification](docs/audit/persistence-spec.md) — the
+   at-rest format, AEAD-at-rest scheme, and the outbox write-ahead
+   mechanism.
+7. [Test vector suite](docs/audit/test-vector-suite.md) — which
+   primitives are checked against independently-sourced vectors (X25519
+   against RFC 7748, HKDF/HMAC live-cross-checked against Node's own
+   implementation) versus self-consistency only (**ML-KEM-1024 has no
+   independent vectors at all** — the same primitive
+   `@noble/post-quantum`'s own audit gap applies to).
+8. [Dependency inventory](docs/audit/dependency-inventory.md) — every
+   runtime dependency's independent-audit status, verified directly
+   from each project's own current documentation. **The single most
+   important finding across all 8 documents**: `@noble/post-quantum`
+   (ML-KEM-1024 — the entire reason this protocol is post-quantum) has
+   **not** been independently audited.
+
+These are audit *preparation* — they make an eventual third-party review
+tractable and give it a documented starting point. **They are not a
+substitute for that review actually happening.** The status at the top
+of this document doesn't change until it does.
 
 ## Design principles this codebase tries to hold to
 
