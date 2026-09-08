@@ -61,3 +61,11 @@ access is required to run the tests.
 - Update [CHANGELOG.md](CHANGELOG.md) under `## Unreleased` for
   user-visible changes; fold it into a dated phase entry once the work is
   actually landed and stable.
+
+## Branching and releases
+
+See [docs/git-workflow.md](docs/git-workflow.md) for the full branching
+model (`main`/`develop`/`feature`/`release`/`hotfix`), SemVer policy, and
+step-by-step recipes for cutting a release or shipping a hotfix. Short
+version: don't commit feature work directly to `main` — branch from
+`develop`.

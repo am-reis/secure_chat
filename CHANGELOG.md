@@ -1,11 +1,18 @@
 # Changelog
 
 All notable changes to this project are documented here, newest first.
-Format loosely follows [Keep a Changelog](https://keepachangelog.com/); this
-project hasn't cut a tagged release yet, so entries are grouped by
-implementation phase (see [docs/spec.md](docs/spec.md)) rather than a
-version number. See the [README](README.md#status) for the fuller, prose
-version of each phase — this file is the scannable index.
+Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
+Entries are grouped by implementation phase (see
+[docs/spec.md](docs/spec.md)) rather than strictly by version — most
+phases are small enough that a version-per-entry index would be noisier,
+not clearer. See [docs/git-workflow.md](docs/git-workflow.md) for how
+releases are actually tagged, and the [README](README.md#status) for the
+fuller, prose version of each phase — this file is the scannable index.
+
+**v0.1.0** (tag: `v0.1.0`) is the retroactive baseline covering everything
+below through the developer integration guides — tagged once the git
+workflow this project now follows was established, not because anything
+changed at that point.
 
 ## Unreleased
 
