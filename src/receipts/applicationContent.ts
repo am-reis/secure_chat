@@ -1,21 +1,27 @@
 import { bytesToHex, hexToBytes } from "../encoding/canonical.js";
 import type { RatchetHeader } from "../ratchet/types.js";
+import type { AttachmentDescriptor } from "../attachments/types.js";
 
 /**
  * Phase 26: "Optional for the first version. Define DELIVERY_RECEIPT,
  * READ_RECEIPT. Both are ordinary encrypted Double Ratchet messages. Do
- * not use transport metadata as delivery/read receipts."
+ * not use transport metadata as delivery/read receipts." Phase 24
+ * (attachments) reuses this exact mechanism: "the entire [attachment]
+ * descriptor must be encrypted inside the Double Ratchet message" — an
+ * attachment descriptor is just another kind of structured content that
+ * needs to travel as opaque ratchet plaintext, same as a receipt.
  *
  * SessionManager (Phase 9) deliberately knows nothing about content
  * structure — it only ever sees opaque plaintext bytes (Invariant 10).
- * Receipts need SOME way to be distinguished from ordinary text within
- * that same opaque plaintext, so this module adds one small, OPTIONAL
- * layer on top: applications that want receipts (or any other structured
- * content) can encode an `ApplicationContent` value and pass the resulting
- * bytes as the plaintext argument to `sessionManager.sendMessage`, then
- * decode whatever comes back from `receiveMessage`. Nothing here changes
- * SessionManager's own API or behavior — plain `Uint8Array` plaintext
- * without this wrapper continues to work exactly as before.
+ * Structured content needs SOME way to be distinguished from ordinary text
+ * within that same opaque plaintext, so this module adds one small,
+ * OPTIONAL layer on top: applications that want receipts, attachments, or
+ * any other structured content can encode an `ApplicationContent` value
+ * and pass the resulting bytes as the plaintext argument to
+ * `sessionManager.sendMessage`, then decode whatever comes back from
+ * `receiveMessage`. Nothing here changes SessionManager's own API or
+ * behavior — plain `Uint8Array` plaintext without this wrapper continues
+ * to work exactly as before.
  *
  * A receipt identifies which message it's acknowledging by the same
  * (ratchetPublicKey, messageNumber) pair that is a message's logical
@@ -43,7 +49,12 @@ export interface ReadReceiptContent {
     timestamp: number;
 }
 
-export type ApplicationContent = TextContent | DeliveryReceiptContent | ReadReceiptContent;
+export interface AttachmentContent {
+    kind: "ATTACHMENT";
+    descriptor: AttachmentDescriptor;
+}
+
+export type ApplicationContent = TextContent | DeliveryReceiptContent | ReadReceiptContent | AttachmentContent;
 
 interface WireTextContent {
     kind: "TEXT";
@@ -55,6 +66,14 @@ interface WireReceiptContent {
     acknowledgedMessageNumber: number;
     timestamp: number;
 }
+interface WireAttachmentContent {
+    kind: "ATTACHMENT";
+    objectId: string;
+    encryptionKey: string;
+    hash: string;
+    size: number;
+    mimeType: string;
+}
 
 /**
  * JSON encoding, same rationale as the transport envelope codec: this is
@@ -64,9 +83,18 @@ interface WireReceiptContent {
  * AEAD-associated-data structure does — it only needs to decode correctly.
  */
 export function encodeApplicationContent(content: ApplicationContent): Uint8Array {
-    let wire: WireTextContent | WireReceiptContent;
+    let wire: WireTextContent | WireReceiptContent | WireAttachmentContent;
     if (content.kind === "TEXT") {
         wire = { kind: "TEXT", text: content.text };
+    } else if (content.kind === "ATTACHMENT") {
+        wire = {
+            kind: "ATTACHMENT",
+            objectId: content.descriptor.objectId,
+            encryptionKey: bytesToHex(content.descriptor.encryptionKey),
+            hash: bytesToHex(content.descriptor.hash),
+            size: content.descriptor.size,
+            mimeType: content.descriptor.mimeType,
+        };
     } else {
         wire = {
             kind: content.kind,
@@ -79,7 +107,7 @@ export function encodeApplicationContent(content: ApplicationContent): Uint8Arra
 }
 
 export function decodeApplicationContent(bytes: Uint8Array): ApplicationContent {
-    let wire: WireTextContent | WireReceiptContent;
+    let wire: WireTextContent | WireReceiptContent | WireAttachmentContent;
     try {
         wire = JSON.parse(new TextDecoder().decode(bytes));
     } catch {
@@ -94,6 +122,18 @@ export function decodeApplicationContent(bytes: Uint8Array): ApplicationContent 
             acknowledgedRatchetPublicKey: hexToBytes(wire.acknowledgedRatchetPublicKey),
             acknowledgedMessageNumber: wire.acknowledgedMessageNumber,
             timestamp: wire.timestamp,
+        };
+    }
+    if (wire.kind === "ATTACHMENT") {
+        return {
+            kind: "ATTACHMENT",
+            descriptor: {
+                objectId: wire.objectId,
+                encryptionKey: hexToBytes(wire.encryptionKey),
+                hash: hexToBytes(wire.hash),
+                size: wire.size,
+                mimeType: wire.mimeType,
+            },
         };
     }
     throw new Error(`Unknown ApplicationContent kind: ${(wire as { kind?: unknown }).kind}`);
@@ -115,4 +155,8 @@ export function buildReadReceipt(acknowledged: RatchetHeader, timestamp: number 
         acknowledgedMessageNumber: acknowledged.messageNumber,
         timestamp,
     };
+}
+
+export function buildAttachmentContent(descriptor: AttachmentDescriptor): AttachmentContent {
+    return { kind: "ATTACHMENT", descriptor };
 }

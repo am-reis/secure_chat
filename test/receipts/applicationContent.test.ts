@@ -4,8 +4,10 @@ import {
     decodeApplicationContent,
     buildDeliveryReceipt,
     buildReadReceipt,
+    buildAttachmentContent,
     type TextContent,
 } from "../../src/receipts/applicationContent.js";
+import { encryptAttachment, decryptAttachment } from "../../src/attachments/attachmentCrypto.js";
 import { NobleCryptoProvider } from "../../src/crypto/NobleCryptoProvider.js";
 import { generateIdentity } from "../../src/identity/identity.js";
 import { generateSignedPreKey } from "../../src/prekeys/signedPrekey.js";
@@ -62,6 +64,21 @@ describe("ApplicationContent — encode/decode round trip", () => {
         const after = Date.now();
         expect(receipt.timestamp).toBeGreaterThanOrEqual(before);
         expect(receipt.timestamp).toBeLessThanOrEqual(after);
+    });
+
+    it("round-trips an ATTACHMENT descriptor (Phase 24)", () => {
+        const encrypted = encryptAttachment(provider, new TextEncoder().encode("attachment bytes"), "image/png");
+        const original = buildAttachmentContent({ objectId: "obj-42", ...encrypted });
+        const decoded = decodeApplicationContent(encodeApplicationContent(original));
+
+        expect(decoded.kind).toBe("ATTACHMENT");
+        if (decoded.kind === "ATTACHMENT") {
+            expect(decoded.descriptor.objectId).toBe("obj-42");
+            expect(toHex(decoded.descriptor.encryptionKey)).toBe(toHex(encrypted.encryptionKey));
+            expect(toHex(decoded.descriptor.hash)).toBe(toHex(encrypted.hash));
+            expect(decoded.descriptor.size).toBe(encrypted.size);
+            expect(decoded.descriptor.mimeType).toBe("image/png");
+        }
     });
 
     it("throws cleanly on non-JSON bytes", () => {
@@ -133,6 +150,35 @@ describe("Receipts as ordinary encrypted messages (Phase 26)", () => {
             expect(decodedReceipt.acknowledgedMessageNumber).toBe(init.ratchetHeader.messageNumber);
         }
         void aliceSession;
+    });
+
+    it("an attachment descriptor travels through a real session, and the recipient can decrypt the referenced blob (Phase 24)", () => {
+        const alice = makeParty();
+        const bob = makeParty();
+
+        // Out of band: Alice encrypts the attachment and "uploads" the
+        // ciphertext (simulated by just holding onto the bytes), getting
+        // back an objectId from the storage backend.
+        const encrypted = encryptAttachment(provider, new TextEncoder().encode("cat.jpg bytes"), "image/jpeg");
+        const uploadedBlob = encrypted.ciphertext; // what a real storage backend would hold
+        const descriptor = { objectId: "storage-object-123", ...encrypted };
+
+        const { envelope: init } = alice.manager.createSession(
+            bob.bundle,
+            encodeApplicationContent(buildAttachmentContent(descriptor)),
+        );
+        const { plaintext } = bob.manager.receiveMessage(init);
+        const received = decodeApplicationContent(plaintext);
+
+        expect(received.kind).toBe("ATTACHMENT");
+        if (received.kind === "ATTACHMENT") {
+            expect(received.descriptor.objectId).toBe("storage-object-123");
+            // Bob "downloads" uploadedBlob using the objectId, then decrypts
+            // it with the key/hash carried inside the (already
+            // ratchet-authenticated) descriptor.
+            const decrypted = decryptAttachment(provider, received.descriptor, uploadedBlob);
+            expect(new TextDecoder().decode(decrypted)).toBe("cat.jpg bytes");
+        }
     });
 
     it("plain Uint8Array plaintext (no ApplicationContent wrapper) continues to work unchanged", () => {
