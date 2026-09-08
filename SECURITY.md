@@ -36,6 +36,17 @@ What exists today toward that eventually happening:
   README's "Fuzzing" entry for the full explanation and the test that
   proves the downstream guarantee actually holds.
 
+**Known current issue — not this project's own code, but worth stating
+plainly rather than leaving to `npm audit`:** `@waku/sdk` (added for
+`RealWakuTransport`, Phase 20/33) pulls in a `uuid` version with a
+moderate-severity advisory (missing bounds check when a buffer is
+explicitly supplied — [GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq)),
+transitively via `@waku/core`/`@waku/discovery`. No fix is published
+upstream as of this writing. This project's own cryptographic code never
+calls into `uuid`; the exposure, if any, is entirely inside js-waku's own
+internals. Re-run `npm audit` before deploying `RealWakuTransport` and
+check whether this has since been resolved upstream.
+
 What's still outstanding before a real audit is meaningful (Phase 31 of
 [docs/spec.md](docs/spec.md)):
 
@@ -46,7 +57,9 @@ What's still outstanding before a real audit is meaningful (Phase 31 of
 5. Key lifecycle specification
 6. Persistence specification
 7. Test vector suite (independently sourced, not just self-consistent)
-8. Dependency inventory (crypto libraries, provenance, version pinning)
+8. Dependency inventory (crypto libraries, provenance, version pinning —
+   now includes `@waku/sdk` and its own dependency tree, not just the
+   `@noble/*` crypto libraries)
 
 ## Design principles this codebase tries to hold to
 

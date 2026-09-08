@@ -11,6 +11,27 @@ version of each phase — this file is the scannable index.
 
 Nothing in flight right now.
 
+## Real Waku transport
+
+- `src/transport/RealWakuTransport.ts`: a `@waku/sdk`-backed `WakuTransport`
+  implementation, plugged into the existing `WakuMessagingClient` with zero
+  changes needed there — confirms the transport abstraction actually
+  holds. Verified against `@waku/sdk`'s real, current source rather than
+  assumed: routing is now derived from a `NetworkConfig`
+  (cluster/shards), `lightPush.send` returns a `{successes, failures}`
+  result instead of throwing, and `ephemeral` is bound to the encoder
+  rather than passed per publish call. `networkConfig` and peer-discovery
+  options are passed straight through, deliberately undefaulted.
+- `test/transport/RealWakuTransport.test.ts`: wiring tests against a
+  mocked `@waku/sdk` (this project's tests still need zero network
+  access) — proves the right SDK calls happen with the right arguments and
+  every failure path maps to a classified `ProtocolError`. Does not, and
+  cannot, prove live delivery.
+- Adds `@waku/sdk` as a real dependency. Its transitive dependency tree
+  currently carries a moderate-severity `npm audit` advisory in `uuid`
+  (no upstream fix yet) — noted in README/SECURITY.md rather than left
+  for `npm audit` to surface as a surprise later.
+
 ## Phase 32 — Security invariants
 
 - [docs/security-invariants.md](docs/security-invariants.md): each of the

@@ -92,6 +92,43 @@ it. A regression test now lives in `test/ratchet/DoubleRatchet.test.ts`.
   rate-limit, Store-based offline catch-up and its own incompleteness,
   injected/malicious messages) through actual `SessionManager` instances
   talking over the mock, not just unit-level fault-injection checks.
+- **Real `@waku/sdk`-backed transport**: `src/transport/RealWakuTransport.ts`
+  implements the same `WakuTransport` interface `MockWakuTransport` does —
+  confirming the abstraction actually holds: `WakuMessagingClient` needed
+  zero changes to accept it. Verified against `@waku/sdk`'s real, current
+  source (not assumed from memory or older js-waku examples) — the modern
+  API differs from what older examples suggest in ways that would be easy
+  to get wrong: `node.createEncoder`/`createDecoder` derive routing
+  internally from a `NetworkConfig` (cluster/shards) rather than just a
+  content topic string, `lightPush.send` returns a `{successes, failures}`
+  result rather than throwing on failure, and `ephemeral` is bound to the
+  ENCODER at creation time rather than passed per publish call (this
+  project's own `PublishOptions.ephemeral` is per-call, so
+  `RealWakuTransport` caches two encoders per content topic — one
+  ephemeral, one not — to bridge that). `networkConfig` and peer-discovery
+  options (`defaultBootstrap` vs. explicit `bootstrapPeers`) are passed
+  straight through, deliberately undefaulted — which network cluster to
+  join is an infrastructure decision this module has no business making
+  silently.
+
+  This class needs a live network to do anything at all, which is exactly
+  what this project's "no network access required to run the tests"
+  principle rules out for automated tests — same boundary already drawn
+  around `MasterKeyProvider`'s real platform-keychain backing (see Phase
+  13, above). `test/transport/RealWakuTransport.test.ts` instead verifies
+  the WIRING against a mocked `@waku/sdk` module: the right SDK calls with
+  the right arguments, correct mapping of `IDecodedMessage` back to this
+  project's `WakuMessage`, and every failure path (`send` resolving with
+  zero successes, `send`/`subscribe`/the store query throwing,
+  `filter.subscribe` resolving `false`) mapped to a classified
+  `ProtocolError`. It does not, and cannot, prove live message delivery —
+  that remains a manual or deployment-time concern.
+
+  Worth knowing before deploying this: `@waku/sdk`'s dependency tree
+  currently pulls in a `uuid` version with a known moderate-severity
+  advisory (`npm audit`; no fix published upstream yet as of this
+  writing) — a transitive dependency issue outside this project's control,
+  noted here rather than left for `npm audit` to surface as a surprise.
 
 **A second, more serious aliasing bug surfaced and got fixed here** — this
 one was latent in already-delivered code, not something newly introduced.
@@ -263,9 +300,8 @@ after restart just decrypts correctly again.
   the identical `encodeEnvelope`/`decodeEnvelope` signatures the JSON
   placeholder had, so nothing above the transport boundary changed.
 
-Not yet built: real `js-waku` integration and multi-device — see
-`docs/spec.md`'s Phase 33 implementation order and
-[CHANGELOG.md](CHANGELOG.md) for what's landed so far.
+Not yet built: multi-device — see `docs/spec.md`'s Phase 33 implementation
+order and [CHANGELOG.md](CHANGELOG.md) for what's landed so far.
 
 ## Structure
 
@@ -280,8 +316,9 @@ src/
   ratchet/       Double Ratchet: state, KDF_RK/KDF_CK, encrypt/decrypt, header AD
   session/       SessionManager: PQXDH + Double Ratchet integration, envelopes
   persistence/   Encrypted-at-rest session storage (Phase 13)
-  transport/     Mock Waku transport, fault injection, content topics, messaging
-                 client, protobuf wire format (Phase 10/20/21/28.4)
+  transport/     Mock + real (@waku/sdk) Waku transports, fault injection,
+                 content topics, messaging client, protobuf wire format
+                 (Phase 10/20/21/28.4)
   receipts/      Delivery/read receipts + the ApplicationContent wrapper
                  (also carries attachment descriptors) (Phase 26/24)
   attachments/   Attachment encryption/decryption + descriptor type (Phase 24)
@@ -298,8 +335,8 @@ npm test                # vitest run
 npm run proto:generate  # regenerate src/transport/proto/envelope.pb.{js,d.ts} after editing envelope.proto
 ```
 
-All tests currently pass (269, including a new regression test the
-security-invariants review itself motivated). No
+All tests currently pass (286, since the real Waku transport's wiring
+tests). No
 network access is required
 to run the tests — the RFC/NIST vectors baked into the crypto tests were
 verified against independent implementations (Node's `crypto`, Python's
