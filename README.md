@@ -300,8 +300,15 @@ after restart just decrypts correctly again.
   the identical `encodeEnvelope`/`decodeEnvelope` signatures the JSON
   placeholder had, so nothing above the transport boundary changed.
 
-Not yet built: multi-device — see `docs/spec.md`'s Phase 33 implementation
-order and [CHANGELOG.md](CHANGELOG.md) for what's landed so far.
+Not yet built: multi-device — deliberately deferred to a future version
+rather than designed from scratch here; see
+[docs/multi-device-future.md](docs/multi-device-future.md) for what that
+would build on (Signal's Sesame algorithm and WhatsApp's per-device-key
+model, both cited from their own public specs) and what this codebase
+already has ready for it (`SessionManager`'s existing 1:1 sessions, the
+domain-separated signing pattern from Phase 3/19). See `docs/spec.md`'s
+Phase 33 implementation order and [CHANGELOG.md](CHANGELOG.md) for what's
+landed so far.
 
 ## Structure
 

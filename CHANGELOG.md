@@ -11,6 +11,19 @@ version of each phase — this file is the scannable index.
 
 Nothing in flight right now.
 
+## Multi-device — documented as deferred, not implemented
+
+- [docs/multi-device-future.md](docs/multi-device-future.md): records the
+  decision to defer multi-device to a future version rather than design it
+  from scratch now. Grounded in the two proven real-world models (Signal's
+  Sesame algorithm, WhatsApp's per-device-key architecture — both fetched
+  from their own current public specs, not assumed from memory) and maps
+  out what this codebase already has ready to build on (`SessionManager`'s
+  existing 1:1 sessions are exactly what both models fan out over — no
+  changes needed there) versus what's genuinely new work (device-list
+  storage/sync, the fan-out orchestration layer, link/revoke signed
+  payloads, stale-session pruning).
+
 ## Real Waku transport
 
 - `src/transport/RealWakuTransport.ts`: a `@waku/sdk`-backed `WakuTransport`
