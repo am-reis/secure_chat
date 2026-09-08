@@ -5,6 +5,14 @@ Transport-agnostic PQXDH + Double Ratchet secure messaging protocol core, per
 order: no UI, no transport (Waku) integration yet — just the cryptographic
 protocol, tested against real, independently-verified test vectors.
 
+**Integrating this into an app? Start with
+[docs/getting-started.md](docs/getting-started.md)** (a minimal two-party
+chat, in ~10 minutes) **and then
+[docs/integration-guide.md](docs/integration-guide.md)** (persistence,
+transport, error handling, and — importantly — what this library
+deliberately does *not* do for you). Both are backed by real, passing
+tests under `test/examples/`, not just prose.
+
 ## Status
 
 Implemented and tested (see commit history for the phase each one landed in):
@@ -339,15 +347,29 @@ test/            Mirrors src/, one test file per module
 npm install
 npm run typecheck      # tsc --noEmit, src + test
 npm test                # vitest run
+npm run build            # compiles src/ to dist/, including copying the
+                          # hand-generated envelope.pb.{js,d.ts} (tsc alone
+                          # won't — they're not .ts sources it compiles)
 npm run proto:generate  # regenerate src/transport/proto/envelope.pb.{js,d.ts} after editing envelope.proto
 ```
 
-All tests currently pass (286, since the real Waku transport's wiring
-tests). No
-network access is required
-to run the tests — the RFC/NIST vectors baked into the crypto tests were
-verified against independent implementations (Node's `crypto`, Python's
-`hashlib`) at the time they were written, not fetched at test time.
+All tests currently pass (291, since the developer-facing integration
+guides and their backing examples). No network access is required to run
+the tests — the RFC/NIST vectors baked into the crypto tests were verified
+against independent implementations (Node's `crypto`, Python's `hashlib`)
+at the time they were written, not fetched at test time.
+
+Everything a consuming application needs is re-exported from
+`src/index.ts` (`import { ... } from "secure-messaging-protocol"`) —
+internal implementation modules (the raw Double Ratchet/PQXDH functions,
+etc.) are deliberately not exported; see that file's own doc comment for
+why. This is verified, not just asserted: `npm run build && npm pack`,
+installing the resulting tarball into a genuinely separate scratch
+project, and running the getting-started flow against the *installed*
+package caught a real bug before it shipped — `npm run build` alone
+produced a `dist/` that was missing `envelope.pb.js`/`.d.ts` (see above),
+which would have broken every consumer importing anything that touches
+the wire format.
 
 ## Design decisions worth knowing before extending this
 

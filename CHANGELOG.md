@@ -11,6 +11,36 @@ version of each phase — this file is the scannable index.
 
 Nothing in flight right now.
 
+## Developer-facing integration guides
+
+- [docs/getting-started.md](docs/getting-started.md): a minimal two-party,
+  in-memory chat walkthrough, and [docs/integration-guide.md](docs/integration-guide.md):
+  persistence + safe sending, transport setup (including a non-obvious
+  self-delivery gotcha on shared content topics), session reset, receipts/
+  attachments, an accurate error-code reference table (including which
+  `ProtocolErrorCode` values are declared but not currently thrown
+  anywhere), and an explicit "what this library does not do" list.
+- Every non-trivial snippet in both guides is backed by a real, passing
+  test under `test/examples/` — the guides narrate tested code rather than
+  contain untested prose that could silently drift out of sync with the
+  API.
+- **Fixed a real, previously-undiscovered packaging bug found while
+  verifying this**: `npm run build` alone produced a `dist/` missing
+  `envelope.pb.js`/`envelope.pb.d.ts` (`tsc` doesn't copy non-`.ts`
+  source files — those are hand-generated and committed as `.js`/`.d.ts`
+  directly), which would have broken every consumer importing anything
+  that touches the wire format. Caught by actually running `npm pack`,
+  installing the tarball into a separate scratch project, and executing
+  the getting-started flow against the installed package — not just by
+  `tsc` succeeding.
+- Added `src/index.ts`, a curated public entrypoint (`import { ... } from
+  "secure-messaging-protocol"`) and the corresponding `package.json`
+  `main`/`types`/`exports` fields — this library previously had **no**
+  configured way to be consumed as an installed dependency at all.
+  Internal implementation modules (raw Double Ratchet/PQXDH functions,
+  the KDF chain, etc.) are deliberately not exported, mirroring Invariant
+  10 at the package boundary.
+
 ## Multi-device — documented as deferred, not implemented
 
 - [docs/multi-device-future.md](docs/multi-device-future.md): records the
