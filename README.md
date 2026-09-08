@@ -179,6 +179,30 @@ after restart just decrypts correctly again.
   and zero cross-talk when two version tags coexist on one network) — not a
   claim that a real, differing-crypto v2 exists yet, since that's Phase 35
   territory and explicitly out of scope for now.
+- **Phase 19 — session reset**: `SessionManager.resetSession`/
+  `receiveSessionReset` handle the case where cryptographic state is
+  uncertain (storage corruption, device restore, excessive
+  skipped-message state, explicit user action) — per the spec, "do not
+  attempt to repair inconsistent Double Ratchet state by guessing or
+  reconstructing missing keys," so this only ever destroys and starts
+  over, never repairs. Local destruction zeroes the root key, both chain
+  keys, the DH ratchet private key, and every stored skipped key via
+  `secureErase` (Invariant 6/7), then notifies the peer with a
+  `SESSION_RESET` envelope. That envelope is authenticated with the
+  sender's long-term Ed25519 identity key rather than the Double Ratchet's
+  associated data — deliberately, since Phase 19 exists precisely for the
+  case where ratchet state can't be trusted, so the authentication for
+  "forget this session" can't depend on it. On receipt, the signature is
+  verified against the identity key already on file for that session
+  before anything is destroyed (an unauthenticated `SESSION_RESET` must
+  never be able to kill a live session — the same DoS concern Phase 23
+  raises for auto-creating sessions, mirrored here for destruction); a
+  failed check leaves the session untouched, matching the "failed
+  authentication must not mutate state" invariant enforced everywhere else
+  in this protocol. Wired all the way through the wire format
+  (`EnvelopeType.SESSION_RESET`, a new `signature` field) and
+  `WakuMessagingClient` (a dedicated content topic, `resetSession()`, and
+  an `onSessionReset` callback), not just at the `SessionManager` layer.
 - **Phase 10 — real (protobuf) wire format**: replaces the earlier JSON
   placeholder codec entirely. Chosen over hand-rolling a binary format
   (despite already having the length-prefixed encoding primitives to do
@@ -191,8 +215,9 @@ after restart just decrypts correctly again.
   the identical `encodeEnvelope`/`decodeEnvelope` signatures the JSON
   placeholder had, so nothing above the transport boundary changed.
 
-Not yet built: real `js-waku` integration — see `docs/spec.md`'s Phase 33
-implementation order.
+Not yet built: real `js-waku` integration, attachments (Phase 24), and
+multi-device — see `docs/spec.md`'s Phase 33 implementation order and
+[CHANGELOG.md](CHANGELOG.md) for what's landed so far.
 
 ## Structure
 
@@ -223,7 +248,7 @@ npm test                # vitest run
 npm run proto:generate  # regenerate src/transport/proto/envelope.pb.{js,d.ts} after editing envelope.proto
 ```
 
-All tests currently pass (235 as of Phase 10's real wire format). No
+All tests currently pass (248 as of Phase 19's session reset). No
 network access is required
 to run the tests — the RFC/NIST vectors baked into the crypto tests were
 verified against independent implementations (Node's `crypto`, Python's
