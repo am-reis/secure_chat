@@ -115,7 +115,11 @@ of this document doesn't change until it does.
 
 ## Reporting a vulnerability
 
-This is currently a personal/internal project with no public release and no
-external users. If you've found a security issue in code derived from this
-repository, please reach out to the maintainer directly rather than opening
-a public issue.
+This repository is public (`github.com/am-reis/secure_chat`) and the
+package is in the process of being published to npm, but it's still
+pre-audit (see the top of this document) and doesn't yet have a formal
+disclosure process set up (no dedicated security contact address, no
+GitHub Private Vulnerability Reporting configured yet). If you've found a
+security issue, please do **not** open a public GitHub issue or otherwise
+disclose it publicly before it's been addressed — reach out to the
+maintainer (`am-reis`) privately instead.

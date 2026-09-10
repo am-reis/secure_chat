@@ -55,6 +55,19 @@ project's own confidence, not just tooling: `test/property/` and
 `test/fuzz/` both depend on it generating genuinely good random coverage,
 not just running fast.
 
+**Known advisory, dev-only**: `@vitest/mocker` 3.2.7 (transitive, via
+`vitest`/`@vitest/coverage-v8` 3.2.7) — path traversal / arbitrary file
+read via a mocker redirect
+([GHSA-82fw-gwwq-j7x9](https://github.com/advisories/GHSA-82fw-gwwq-j7x9)).
+A fix exists (`npm audit fix --force` would move to `vitest@5.0.0`) but
+is a breaking major-version change this project hasn't adopted yet. Lower
+real-world severity than the `uuid` advisory above precisely because
+this dependency never ships — it only runs as part of `npm test` in a
+trusted local/CI environment, never in anything a consumer installs.
+Still worth tracking: re-check `npm audit` before every release (same
+discipline as the `uuid` entry), and revisit the `vitest@5` upgrade once
+it's had time to stabilize.
+
 ## Version pinning policy
 
 Every dependency here uses a caret range (`^X.Y.Z`) in `package.json`
