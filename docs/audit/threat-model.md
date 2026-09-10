@@ -167,9 +167,15 @@ re-derived here:
    `docs/audit/dependency-inventory.md`.
 2. Skipped message keys have no time-based expiry, only size bounds —
    `docs/audit/key-lifecycle.md`.
-3. `RealWakuTransport` has been verified for correct SDK wiring but never
-   exercised against a live Waku network from within this project —
-   `docs/integration-guide.md`.
+3. `RealWakuTransport` has been verified for correct SDK wiring and
+   separately run end to end against the live public Waku network
+   (`npm run validate:live-waku`) — see `docs/integration-guide.md`. That
+   run used `defaultBootstrap: true` (whichever ENR trees `@waku/sdk`
+   itself resolves that to — see the script's own doc comment) with no
+   custom `networkConfig`; a deployment using a different cluster/shard
+   configuration should re-run this validation under its own actual
+   configuration rather than assume the default-config result
+   generalizes.
 4. `@waku/sdk`'s dependency tree carries a known, unfixed moderate `uuid`
    advisory — `docs/audit/dependency-inventory.md`.
 5. No prekey bundle discovery/exchange mechanism exists, which is both a

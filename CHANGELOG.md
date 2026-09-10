@@ -18,9 +18,36 @@ anything changed at that point.
 documents) and Phase 36 (the prekey bundle discovery gap, recorded and
 deferred to a future protocol version) on top of v0.1.0.
 
+**v0.3.0** (tag: `v0.3.0`) adds live-network validation for
+`RealWakuTransport` (`npm run validate:live-waku`) on top of v0.2.0 —
+closes the "never run against a live network" gap that had stood since
+the real transport was first built.
+
 ## Unreleased
 
 Nothing in flight right now.
+
+## Live Waku network validation
+
+- `scripts/live-waku-validation.mjs` (`npm run validate:live-waku`):
+  manual, deployment-time validation of `RealWakuTransport` against the
+  real public Waku network — outside `npm test` for the same
+  no-network-required-for-automated-tests reason as the rest of this
+  project's suite. Two independent nodes (Alice, Bob) ran a full PQXDH
+  handshake and message exchange live: `createSession` published and
+  received over a real Filter subscription, a reply received the same
+  way, and a Store-protocol history query returning real results.
+  Closes the "never run against a live network" gap noted in
+  `docs/integration-guide.md` and `docs/audit/threat-model.md`'s
+  residual risks list since `RealWakuTransport` was first built.
+- Confirmed live, not just predicted from the mock: each node saw
+  exactly one `AEAD_AUTHENTICATION_FAILED` from hearing its own
+  published envelope back over the shared content topic — the
+  self-delivery behavior the integration guide already documented from
+  `MockWakuNetwork`'s design now holds on the real network too.
+- Imports from `dist/`, not `src/` — deliberately, so every run also
+  doubles as a packaging sanity check against the actual public
+  entrypoint an external consumer would use.
 
 ## Phase 31 — Security audit preparation
 

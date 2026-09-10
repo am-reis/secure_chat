@@ -123,14 +123,29 @@ it. A regression test now lives in `test/ratchet/DoubleRatchet.test.ts`.
   what this project's "no network access required to run the tests"
   principle rules out for automated tests — same boundary already drawn
   around `MasterKeyProvider`'s real platform-keychain backing (see Phase
-  13, above). `test/transport/RealWakuTransport.test.ts` instead verifies
-  the WIRING against a mocked `@waku/sdk` module: the right SDK calls with
+  13, above). `test/transport/RealWakuTransport.test.ts` verifies the
+  WIRING against a mocked `@waku/sdk` module: the right SDK calls with
   the right arguments, correct mapping of `IDecodedMessage` back to this
   project's `WakuMessage`, and every failure path (`send` resolving with
   zero successes, `send`/`subscribe`/the store query throwing,
   `filter.subscribe` resolving `false`) mapped to a classified
-  `ProtocolError`. It does not, and cannot, prove live message delivery —
-  that remains a manual or deployment-time concern.
+  `ProtocolError`.
+
+  **Since then, actually run against the live public Waku network** —
+  `scripts/live-waku-validation.mjs` (`npm run validate:live-waku`), a
+  manual/deployment-time script rather than part of `npm test` for the
+  same no-network-required-for-tests reason. Two independent nodes
+  (Alice, Bob, each its own generated identity) ran the full stack —
+  `createSession`'s PQXDH handshake published live, received and
+  decrypted by Bob over a real Filter subscription; Bob's reply received
+  by Alice the same way; a Store-protocol history query returning real
+  results — against `@waku/sdk`'s actual bootstrap-discovered peers, not
+  a mock. It also confirmed, live, exactly the self-delivery behavior
+  already documented in the integration guide: each node received
+  exactly one `AEAD_AUTHENTICATION_FAILED` from hearing its own published
+  envelope back over the shared content topic — predicted from the mock
+  transport's behavior, now confirmed on the real network rather than
+  assumed to generalize.
 
   Worth knowing before deploying this: `@waku/sdk`'s dependency tree
   currently pulls in a `uuid` version with a known moderate-severity
