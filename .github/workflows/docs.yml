@@ -1,0 +1,62 @@
+name: Deploy Docs to GitHub Pages
+
+# Assembles a static site from the existing project docs (docs/, plus the
+# root-level README/SECURITY/CHANGELOG/CONTRIBUTING/LICENSE) and
+# force-pushes it to the gh-pages branch. Deliberately uses plain git +
+# the repo's own built-in GITHUB_TOKEN rather than a third-party
+# marketplace action — one fewer external dependency to trust for a
+# security-conscious project, and this is simple enough not to need one.
+#
+# No Jekyll build happens here: the gh-pages branch holds raw markdown +
+# docs-site/_config.yml, and GitHub Pages' own infrastructure runs Jekyll
+# when it serves the branch — that's what "Deploy from a branch" in the
+# repo's Pages settings actually does. This workflow's only job is
+# keeping that branch's content in sync with what's on main.
+#
+# One-time manual step this needs (can't be done from a workflow file):
+# in the repo's Settings -> Pages, set Source to "Deploy from a branch",
+# branch: gh-pages, folder: / (root). See docs/git-workflow.md.
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "docs/**"
+      - "docs-site/**"
+      - "README.md"
+      - "SECURITY.md"
+      - "CHANGELOG.md"
+      - "CONTRIBUTING.md"
+      - "LICENSE"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assemble site content
+        run: |
+          set -e
+          rm -rf _site
+          mkdir -p _site
+          cp -r docs _site/docs
+          cp docs-site/_config.yml _site/_config.yml
+          cp docs-site/index.md _site/index.md
+          cp README.md SECURITY.md CHANGELOG.md CONTRIBUTING.md LICENSE _site/
+
+      - name: Push to gh-pages
+        run: |
+          set -e
+          cd _site
+          git init -q -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Deploy docs from ${{ github.sha }}"
+          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          git push --force origin gh-pages
