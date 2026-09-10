@@ -129,10 +129,15 @@ Two `WakuTransport` implementations exist:
   discovery (`defaultBootstrap` vs. explicit `bootstrapPeers`) —
   deliberately not defaulted; see `src/transport/RealWakuTransport.ts`'s
   own doc comment and `test/transport/RealWakuTransport.test.ts` for the
-  wiring (mocked-SDK) tests. **This has been verified for correct wiring
-  against `@waku/sdk`'s real API, but never run against a live Waku
-  network from within this project** — that's the next real-world
-  validation step before depending on it in production.
+  wiring (mocked-SDK) tests. Verified for correct wiring against
+  `@waku/sdk`'s real API, **and separately run end to end against the live
+  public Waku network** — `npm run validate:live-waku`
+  (`scripts/live-waku-validation.mjs`) runs two independent nodes through
+  a full PQXDH handshake and message exchange over real infrastructure,
+  outside `npm test` for the same no-network-required reason as the rest
+  of this project's automated suite. Re-run it after any `@waku/sdk`
+  upgrade or before a release that touches the transport layer — it's not
+  a one-time check.
 
 ```ts
 import { MockWakuNetwork, MockWakuTransport, WakuMessagingClient } from "secure-messaging-protocol";

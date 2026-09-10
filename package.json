@@ -20,7 +20,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
-    "proto:generate": "pbjs -t static-module -w es6 -o src/transport/proto/envelope.pb.js src/transport/proto/envelope.proto && pbts -o src/transport/proto/envelope.pb.d.ts src/transport/proto/envelope.pb.js"
+    "proto:generate": "pbjs -t static-module -w es6 -o src/transport/proto/envelope.pb.js src/transport/proto/envelope.proto && pbts -o src/transport/proto/envelope.pb.d.ts src/transport/proto/envelope.pb.js",
+    "validate:live-waku": "npm run build && node scripts/live-waku-validation.mjs"
   },
   "dependencies": {
     "@noble/ciphers": "^2.4.0",
