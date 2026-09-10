@@ -1,9 +1,36 @@
 {
   "name": "secure-messaging-protocol",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "PQXDH + Double Ratchet secure messaging protocol core (transport-agnostic)",
   "type": "module",
-  "private": true,
+  "license": "Apache-2.0",
+  "author": "am-reis",
+  "homepage": "https://github.com/am-reis/secure_chat#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/am-reis/secure_chat.git"
+  },
+  "bugs": {
+    "url": "https://github.com/am-reis/secure_chat/issues"
+  },
+  "keywords": [
+    "encryption",
+    "end-to-end-encryption",
+    "e2ee",
+    "double-ratchet",
+    "pqxdh",
+    "post-quantum",
+    "post-quantum-cryptography",
+    "signal-protocol",
+    "secure-messaging",
+    "waku"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

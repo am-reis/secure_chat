@@ -1,0 +1,5 @@
+title: Secure Messaging Protocol
+description: Transport-agnostic PQXDH + Double Ratchet secure messaging protocol core
+theme: jekyll-theme-cayman
+show_downloads: false
+markdown: kramdown

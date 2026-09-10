@@ -129,9 +129,15 @@ describe("InMemoryPrekeyStore — lifecycle", () => {
         const store = makeStore();
         store.addOneTimePreKeys(generateOneTimePreKeys(provider, 1, 1));
         const copy = store.getOneTimePreKey(1)!;
-        copy.publicKey[0] = 0xff;
+        const originalFirstByte = copy.publicKey[0];
+        // Flip the byte rather than pin it to a fixed value: the key is
+        // randomly generated, so asserting against a hardcoded 0xff was
+        // flaky (~1/256 chance the random byte already was 0xff, making
+        // the mutation a no-op and the assertion fail on an unrelated
+        // coincidence, not a real live-reference bug).
+        copy.publicKey[0] = originalFirstByte ^ 0xff;
         const copy2 = store.getOneTimePreKey(1)!;
-        expect(copy2.publicKey[0]).not.toBe(0xff);
+        expect(copy2.publicKey[0]).toBe(originalFirstByte);
     });
 
     it("getOneTimePreKey returns undefined for a nonexistent id", () => {
