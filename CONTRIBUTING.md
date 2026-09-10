@@ -1,9 +1,13 @@
 # Contributing
 
-This is currently a solo/internal project (no remote, synced between
-machines via `git bundle` — see `../pull_from_git_bundle.sh`), but the
-conventions below are worth keeping even without other contributors, since
-they're what makes the commit history and README useful as documentation.
+This is currently a solo project — the repo is public
+(`github.com/am-reis/secure_chat`) with CI and a docs site, but there's
+just one maintainer and no external contributors yet. (A `git bundle`
+sync path for working across machines without pushing also still exists
+— see `../pull_from_git_bundle.sh` — independent of the GitHub remote,
+not a replacement for it.) The conventions below are worth keeping even
+solo, since they're what makes the commit history and README useful as
+documentation.
 
 ## Setup
 
