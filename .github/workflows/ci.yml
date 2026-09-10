@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # package.json's "engines" field claims >=20 — actually verify that,
+        # not just assert it.
+        node-version: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+      - run: npm run build
+
+      - name: Verify the package would publish cleanly (dry run — never actually publishes)
+        run: npm publish --dry-run
+
+      - name: Smoke-test the packed tarball as a real external consumer would install it
+        # This is the exact class of check that caught a real bug before it
+        # shipped: `tsc` alone doesn't copy envelope.pb.js/.d.ts into dist/
+        # (they're hand-generated, not compiled from .ts), so a package that
+        # typechecks and passes every test can still be broken for anyone
+        # who actually installs it. `npm run build` + `npm test` alone would
+        # never have caught that — installing the real tarball into a truly
+        # separate project and importing from the published entrypoint does.
+        run: |
+          set -e
+          npm pack
+          TARBALL="$(ls secure-messaging-protocol-*.tgz)"
+          SMOKE_DIR="$(mktemp -d)"
+          cp "$TARBALL" "$SMOKE_DIR/"
+          cd "$SMOKE_DIR"
+          npm init -y >/dev/null
+          npm pkg set type=module >/dev/null
+          npm install "./$TARBALL" >/dev/null
+          node -e "
+            import('secure-messaging-protocol').then((m) => {
+              const required = ['NobleCryptoProvider', 'generateIdentity', 'SessionManager', 'RealWakuTransport', 'MockWakuTransport', 'WakuMessagingClient', 'ProtocolError'];
+              const missing = required.filter((name) => typeof m[name] === 'undefined');
+              if (missing.length > 0) {
+                throw new Error('Installed package is missing expected exports: ' + missing.join(', '));
+              }
+              console.log('OK: installed package exposes all expected exports:', required.join(', '));
+            });
+          "

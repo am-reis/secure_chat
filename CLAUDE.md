@@ -43,6 +43,14 @@ documented:
   It's the export branch `../pull_from_git_bundle.sh` syncs across
   machines — leave it alone unless the user specifically asks about
   cross-machine sync.
+- **Never run `npm publish` (or `npm publish --dry-run`'s non-dry-run
+  cousin) directly.** This package publishes publicly to npm exclusively
+  through `.github/workflows/release.yml`, gated behind the `npm-publish`
+  GitHub Environment's required-reviewer approval — that gate is the
+  whole point (a human approves every release of an installable public
+  package). `npm publish --dry-run` is fine any time (it never actually
+  publishes); the real command is not, ever, run locally or by me. See
+  `docs/git-workflow.md`'s "CI and npm publishing" section.
 
 ## Other conventions (already established, don't relitigate)
 

@@ -146,6 +146,56 @@ tag doesn't; that message is where "what's in this release" lives at a
 glance (`git show v0.2.0`). Tag format: `vX.Y.Z`, always on `main`, always
 right after the merge that completes a release or hotfix.
 
+## CI and npm publishing
+
+Two GitHub Actions workflows automate the checks/release steps above —
+neither replaces the recipes; they run alongside them.
+
+- **`.github/workflows/ci.yml`** — every push to `main`/`develop` and
+  every PR against them: typecheck, test, build, a `npm publish --dry-run`
+  sanity check, and a real packaging smoke test (pack the tarball, install
+  it into a genuinely separate temp project, import from the published
+  entrypoint, and check every expected export exists). That last step is
+  not decorative — it's the exact class of check that caught a real bug
+  before this package ever shipped (`tsc` alone doesn't copy
+  `envelope.pb.js`/`.d.ts` into `dist/`; see `CHANGELOG.md`). Runs on a
+  Node 20 + Node 22 matrix, since `package.json`'s `engines` field claims
+  `>=20` — verified, not just asserted.
+- **`.github/workflows/release.yml`** — triggered by pushing a `vX.Y.Z`
+  tag. A `verify` job re-runs the same checks on the exact tagged commit
+  (never trust that CI already passed on some earlier commit on the
+  branch — the tag is what's about to ship) and confirms the tag matches
+  `package.json`'s version. Only if that passes does a `publish` job
+  become runnable — and it's gated behind the `npm-publish` GitHub
+  Environment's required reviewers: a human has to click approve before
+  `npm publish` actually runs, every release, on purpose, for a public,
+  installable package. Publishing uses `--provenance` (cryptographic
+  attestation that the published package really was built by this
+  workflow, from this commit — npm's supply-chain-security feature), and
+  the job also creates a GitHub Release from the annotated tag's own
+  message.
+
+**One-time manual setup this requires** (can't be done from a workflow
+file or from here — needs the repo owner's GitHub/npm account access):
+
+1. On npmjs.com: generate an **Automation**-type access token (Account →
+   Access Tokens → Generate New Token → Automation — this type is meant
+   for CI and isn't blocked by 2FA-per-publish the way a normal token is).
+2. In the GitHub repo: **Settings → Secrets and variables → Actions →
+   New repository secret**, name it `NPM_TOKEN`, paste the token from
+   step 1.
+3. In the GitHub repo: **Settings → Environments → New environment**,
+   name it exactly `npm-publish` (must match `release.yml`'s
+   `environment:` value), and add at least one required reviewer under
+   "Deployment protection rules" — this is what actually makes step 3 of
+   the release workflow a manual gate; the environment name alone does
+   nothing without a reviewer configured.
+
+Until all three exist, `release.yml`'s `publish` job will fail (missing
+`NPM_TOKEN`) or never even show up as awaiting approval (missing
+environment) — `ci.yml` and the `verify` job of `release.yml` work fine
+without any of this, since neither actually publishes anything.
+
 ## Commit conventions
 
 Unchanged — see [CONTRIBUTING.md](../CONTRIBUTING.md): conventional
@@ -153,10 +203,13 @@ prefixes (`feat`/`fix`/`test`/`docs`/`chore`), reference the spec phase
 when implementing one, a `docs:` follow-up commit for README updates
 rather than bloating the feature commit's diff.
 
-## Once a remote exists
+## Now that a remote exists
 
-Everything above still holds; the only change is that `feature/*`
-branches get pushed and merged via pull request instead of a local
-`git merge`, and `develop`/`main` are protected (no direct pushes, only
-merges of reviewed PRs and of `release/*`/`hotfix/*` branches). Nothing
-about the branch model itself needs to change to add that.
+The repo is hosted at `github.com/am-reis/secure_chat`. Everything above
+still holds as the local-first recipe; going forward, `feature/*`
+branches should get pushed and merged via pull request rather than a
+local `git merge` where practical, and `develop`/`main` should eventually
+be branch-protected (no direct pushes, only merges of reviewed PRs and of
+`release/*`/`hotfix/*` branches) once that's set up in the repo's
+settings — not yet configured as of this writing. Nothing about the
+branch model itself needs to change to add that.

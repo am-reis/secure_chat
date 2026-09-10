@@ -1,0 +1,89 @@
+name: Release
+
+# Triggered by pushing an annotated vX.Y.Z tag (see docs/git-workflow.md's
+# release recipe). `verify` re-runs the full check on the exact tagged
+# commit — never trust that CI already passed on some earlier commit on the
+# branch; the tag is what's about to be published, so it's what gets
+# checked. `publish` only becomes runnable after `verify` passes, and is
+# additionally gated behind the `npm-publish` GitHub Environment's required
+# reviewers (configured in this repo's Settings -> Environments, not in
+# this file) — a human has to approve the actual `npm publish` step for
+# every release, on purpose, for a public and installable package.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    outputs:
+      pkg-version: ${{ steps.pkg.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need full history to read the annotated tag's own message later
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm publish --dry-run
+
+      - id: pkg
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Verify the pushed tag matches package.json's version
+        run: |
+          set -e
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION="${{ steps.pkg.outputs.version }}"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION — refusing to publish a mismatched release."
+            exit 1
+          fi
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    # This environment must exist in the repo's Settings -> Environments
+    # with required reviewers configured — that's what actually makes this
+    # a manual-approval gate; the environment name alone does nothing
+    # without that configuration. See docs/git-workflow.md.
+    environment: npm-publish
+    permissions:
+      contents: write # to create the GitHub Release below
+      id-token: write # for npm provenance (--provenance)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Publish to npm (with provenance)
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release from the tag's own annotated message
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          NOTES="$(git tag -l --format='%(contents)' "${GITHUB_REF_NAME}")"
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes "$NOTES"
