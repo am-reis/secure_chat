@@ -25,7 +25,16 @@ the real transport was first built.
 
 ## Unreleased
 
-Nothing in flight right now.
+- **GitHub Pages docs site.** `.github/workflows/docs.yml` assembles
+  `docs/` plus the root README/SECURITY/CHANGELOG/CONTRIBUTING/LICENSE
+  and force-pushes them to a `gh-pages` branch on every push to
+  `main`/`develop` that touches those paths — plain git + the built-in
+  `GITHUB_TOKEN`, no third-party action. `docs-site/index.md` is a
+  purpose-built landing page linking every doc; GitHub Pages' own Jekyll
+  build (once enabled — see `docs/git-workflow.md`) renders it, not a
+  build step in the workflow itself. Also synced `package-lock.json`'s
+  root metadata, which had drifted from `package.json` across this
+  session's version bumps.
 
 ## Public npm packaging + CI/release automation
 
