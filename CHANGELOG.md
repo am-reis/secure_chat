@@ -23,18 +23,27 @@ deferred to a future protocol version) on top of v0.1.0.
 closes the "never run against a live network" gap that had stood since
 the real transport was first built.
 
+**v0.4.0** (tag: `v0.4.0`) makes the package actually publicly
+installable on top of v0.3.0: public npm packaging metadata + an
+Apache-2.0 license, GitHub Actions CI (every push/PR) and a
+manually-gated release pipeline (every tag), and a GitHub Pages docs
+site — plus a flaky-test fix found while standing up CI.
+
 ## Unreleased
 
-- **GitHub Pages docs site.** `.github/workflows/docs.yml` assembles
-  `docs/` plus the root README/SECURITY/CHANGELOG/CONTRIBUTING/LICENSE
-  and force-pushes them to a `gh-pages` branch on every push to
-  `main`/`develop` that touches those paths — plain git + the built-in
-  `GITHUB_TOKEN`, no third-party action. `docs-site/index.md` is a
-  purpose-built landing page linking every doc; GitHub Pages' own Jekyll
-  build (once enabled — see `docs/git-workflow.md`) renders it, not a
-  build step in the workflow itself. Also synced `package-lock.json`'s
-  root metadata, which had drifted from `package.json` across this
-  session's version bumps.
+Nothing in flight right now.
+
+## GitHub Pages docs site
+
+- `.github/workflows/docs.yml` assembles `docs/` plus the root
+  README/SECURITY/CHANGELOG/CONTRIBUTING/LICENSE and force-pushes them
+  to a `gh-pages` branch on every push to `main`/`develop` that touches
+  those paths — plain git + the built-in `GITHUB_TOKEN`, no third-party
+  action. `docs-site/index.md` is a purpose-built landing page linking
+  every doc; GitHub Pages' own Jekyll build (once enabled — see
+  `docs/git-workflow.md`) renders it, not a build step in the workflow
+  itself. Also synced `package-lock.json`'s root metadata, which had
+  drifted from `package.json` across this session's version bumps.
 
 ## Public npm packaging + CI/release automation
 
