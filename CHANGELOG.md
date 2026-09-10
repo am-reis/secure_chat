@@ -18,6 +18,11 @@ anything changed at that point.
 documents) and Phase 36 (the prekey bundle discovery gap, recorded and
 deferred to a future protocol version) on top of v0.1.0.
 
+**v0.3.0** (tag: `v0.3.0`) adds live-network validation for
+`RealWakuTransport` (`npm run validate:live-waku`) on top of v0.2.0 —
+closes the "never run against a live network" gap that had stood since
+the real transport was first built.
+
 ## Unreleased
 
 Nothing in flight right now.
