@@ -27,6 +27,34 @@ the real transport was first built.
 
 Nothing in flight right now.
 
+## Public npm packaging + CI/release automation
+
+- Removed `"private": true`; added `license` (Apache-2.0), `repository`,
+  `homepage`, `bugs`, `keywords`, `engines` (`node >=20`, now actually
+  verified by CI, not just asserted), and `publishConfig.access: public`
+  to `package.json`. Added an `Apache-2.0` `LICENSE` file (canonical text
+  from apache.org, not reproduced from memory).
+- `.github/workflows/ci.yml`: typecheck + test + build on every push to
+  `main`/`develop` and every PR, on a Node 20 + 22 matrix. Also runs a
+  real packaging smoke test every time — pack the tarball, install it
+  into a genuinely separate temp project, import from the published
+  entrypoint, assert every expected export exists. This is now automated
+  forever the exact check that caught a real bug (missing
+  `envelope.pb.js`/`.d.ts` in `dist/`) before this package's entrypoint
+  first shipped.
+- `.github/workflows/release.yml`: triggered by pushing a `vX.Y.Z` tag.
+  Re-verifies everything on the exact tagged commit, confirms the tag
+  matches `package.json`'s version, and only then makes an `npm publish
+  --provenance` job available — gated behind the `npm-publish` GitHub
+  Environment's required-reviewer approval, so a human approves every
+  release of this now-public, installable package. Also creates a
+  GitHub Release from the tag's own annotated message.
+- Documented the one-time manual setup this needs (an npm Automation
+  token as the `NPM_TOKEN` repo secret, and the `npm-publish` environment
+  with a required reviewer) in `docs/git-workflow.md` — neither can be
+  configured from a workflow file or by an agent; both need the repo
+  owner's GitHub/npm account access.
+
 ## Live Waku network validation
 
 - `scripts/live-waku-validation.mjs` (`npm run validate:live-waku`):

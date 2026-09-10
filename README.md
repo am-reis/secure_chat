@@ -1,5 +1,17 @@
 # Secure Messaging Protocol — Core
 
+[![npm version](https://img.shields.io/npm/v/secure-messaging-protocol.svg)](https://www.npmjs.com/package/secure-messaging-protocol)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
+```bash
+npm install secure-messaging-protocol
+```
+
+**⚠️ Pre-audit — see [SECURITY.md](SECURITY.md).** This has not undergone
+a third-party security audit. Published to npm for real installability
+and CI/release rigor, not as a claim of production readiness — don't use
+it to protect real communications yet.
+
 Transport-agnostic PQXDH + Double Ratchet secure messaging protocol core, per
 `docs/spec.md`. Built in-memory-first per the spec's Phase 33 implementation
 order: no UI, no transport (Waku) integration yet — just the cryptographic
@@ -426,3 +438,7 @@ the wire format.
   root key as the HKDF *salt* and the fresh DH output as the *input key
   material*. Both are correct per their respective specs; it's just easy to
   transpose them by habit. See `src/ratchet/kdf.ts`.
+
+## License
+
+[Apache-2.0](LICENSE).
