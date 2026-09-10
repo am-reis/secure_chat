@@ -1,6 +1,6 @@
 {
   "name": "secure-messaging-protocol",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "PQXDH + Double Ratchet secure messaging protocol core (transport-agnostic)",
   "type": "module",
   "license": "Apache-2.0",
