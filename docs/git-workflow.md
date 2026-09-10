@@ -196,6 +196,18 @@ Until all three exist, `release.yml`'s `publish` job will fail (missing
 environment) — `ci.yml` and the `verify` job of `release.yml` work fine
 without any of this, since neither actually publishes anything.
 
+## GitHub Pages (project docs site)
+
+`.github/workflows/docs.yml` pushes an assembled copy of `docs/` plus the
+root-level README/SECURITY/CHANGELOG/CONTRIBUTING/LICENSE to a `gh-pages`
+branch on every push to `main`/`develop` that touches those paths (or on
+manual dispatch). It only pushes the branch — it doesn't turn Pages on.
+
+**One-time manual step**: in the GitHub repo, **Settings → Pages →
+Source: "Deploy from a branch"**, branch: `gh-pages`, folder: `/` (root).
+Until that's set, the `gh-pages` branch exists and is kept up to date,
+but nothing is actually served from it.
+
 ## Commit conventions
 
 Unchanged — see [CONTRIBUTING.md](../CONTRIBUTING.md): conventional
